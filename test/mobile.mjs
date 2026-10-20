@@ -285,15 +285,18 @@ await evalJs(`document.getElementById('btnSettingsBack').click()`);
 await sleep(400);
 
 /* ---------- setup link still lands on the token box ---------- */
-await send('Page.navigate', { url: URL + '#setup' });
-for (let i = 0; i < 40; i++) {
+/* Tapping the link while the app is open is a hash change, so test it that way. */
+await evalJs("location.hash = '#setup'; true");
+let setupReady = false;
+for (let i = 0; i < 60; i++) {
   await sleep(250);
   const r = await send('Runtime.evaluate', {
     expression: "!!(window.QS && document.body && /view-settings/.test(document.body.className))",
     returnByValue: true
   }).catch(() => null);
-  if (r && r.result && r.result.value) break;
+  if (r && r.result && r.result.value) { setupReady = true; break; }
 }
+if (setupReady) await sleep(400);
 await check('setup link opens settings', "document.body.classList.contains('view-settings')", true);
 await check('setup link clears itself from the URL', "/setup/.test(location.hash)", false);
 
