@@ -21,13 +21,23 @@
     state.view = v;
     document.body.classList.toggle('view-list', v === 'list');
     document.body.classList.toggle('view-detail', v === 'detail');
+    document.body.classList.toggle('view-settings', v === 'settings');
     if (v === 'detail') {
       var s = $('sheet');
       if (s) s.scrollTop = 0;
+    } else if (v === 'settings') {
+      var g = $('settingsScroll');
+      if (g) g.scrollTop = 0;
     } else {
       var l = $('listScroll');
       if (l) l.scrollTop = 0;
     }
+  }
+
+  function openSettings() {
+    setView('settings');
+    fillSyncFields();
+    renderSyncState();
   }
 
   function openDetail(id) {
@@ -429,9 +439,7 @@
   function renderAll() {
     var q = state.quote;
     dom.metaNumber.value = q.number || '';
-    dom.metaDate.value = q.date || '';
-    dom.metaValid.value = q.validUntil || '';
-    dom.metaPreparedBy.value = q.preparedBy || '';
+    dom.metaPreparedBy.value = q.preparedBy || QS.PREPARED_BY;
     dom.status.value = q.status || 'draft';
     dom.discount.value = q.discount || 0;
     dom.taxRate.value = q.taxRate || 0;
@@ -573,7 +581,7 @@
     if (state.dirty) await saveNow();
     state.all = await QS.store.listQuotes();
     var q = QS.newQuote(QS.nextNumber(state.all));
-    q.preparedBy = (await QS.store.getMeta('preparedBy')) || '';
+    q.preparedBy = (await QS.store.getMeta('preparedBy')) || QS.PREPARED_BY;
     await QS.store.putQuote(q);
     state.quote = q;
     state.photos = [];
@@ -589,15 +597,10 @@
      hashchange, so tapping the link while the app is already open still works. */
   function applySetupLink() {
     if (!/#setup\b/.test(location.hash || '')) return false;
-    if (dom && dom.workList) { setView('list'); renderList(); }
-    var sbox = $('syncBox');
-    if (sbox) {
-      sbox.open = true;
-      try { sbox.scrollIntoView({ block: 'center' }); } catch (e) {}
-      var tin = $('syncToken');
-      if (tin) setTimeout(function () { try { tin.focus(); } catch (e) {} }, 200);
-      if (dom && dom.workList) note('Paste the token, then Save settings');
-    }
+    openSettings();
+    var tin = $('syncToken');
+    if (tin) setTimeout(function () { try { tin.focus(); } catch (e) {} }, 200);
+    note('Paste the token, then Save settings');
     try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {}
     return true;
   }
@@ -635,8 +638,6 @@
       doneBanner: $('doneBanner'),
       doneText: $('doneText'),
       metaNumber: $('metaNumber'),
-      metaDate: $('metaDate'),
-      metaValid: $('metaValid'),
       metaPreparedBy: $('metaPreparedBy'),
       discount: $('discount'),
       taxRate: $('taxRate'),
@@ -651,8 +652,6 @@
     state.all = await QS.store.listQuotes();
 
     /* meta bindings */
-    dom.metaDate.addEventListener('input', function () { state.quote.date = dom.metaDate.value; scheduleSave(); });
-    dom.metaValid.addEventListener('input', function () { state.quote.validUntil = dom.metaValid.value; scheduleSave(); });
     dom.metaPreparedBy.addEventListener('input', function () {
       state.quote.preparedBy = dom.metaPreparedBy.value;
       QS.store.setMeta('preparedBy', dom.metaPreparedBy.value);
@@ -690,16 +689,19 @@
     });
     window.addEventListener('popstate', function () {
       if (state.view === 'detail') { saveNow(); setView('list'); renderList(); }
+      else if (state.view === 'settings') { setView('list'); renderList(); }
     });
 
     /* buttons */
     $('btnSave').addEventListener('click', pushNow);
     $('btnPrint').addEventListener('click', printNow);
     $('btnSaveAll').addEventListener('click', pushNow);
-    $('btnExport2').addEventListener('click', pushNow);
+    $('btnSettings').addEventListener('click', openSettings);
+    $('btnSettingsBack').addEventListener('click', function () {
+      setView('list');
+      renderList();
+    });
     $('btnDownload').addEventListener('click', exportBackup);
-    $('btnDownload2').addEventListener('click', exportBackup);
-    $('btnPull').addEventListener('click', pullNow);
     $('btnSyncSave').addEventListener('click', saveSyncSettings);
     $('btnSyncPull').addEventListener('click', pullNow);
     if ($('btnSyncPaste')) {
@@ -724,7 +726,6 @@
       note('Token removed from this phone');
     });
     $('btnImport').addEventListener('click', function () { $('importFile').click(); });
-    $('btnImport2').addEventListener('click', function () { $('importFile').click(); });
     $('importFile').addEventListener('change', function (e) {
       if (e.target.files[0]) importBackup(e.target.files[0]);
       e.target.value = '';

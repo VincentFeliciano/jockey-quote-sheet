@@ -34,7 +34,7 @@ QS.printDoc = (function () {
     var t = QS.totals(q);
     var c = q.customer || {};
     var j = q.job || {};
-    var s = q.silks || {};
+    var p = QS.fillPaint(q.paint);
     var out = [];
 
     /* header */
@@ -42,8 +42,7 @@ QS.printDoc = (function () {
     out.push('<div><h1>Quote</h1></div>');
     out.push('<div class="p-meta">');
     out.push('<div><b>' + esc(q.number || 'un-numbered') + '</b></div>');
-    out.push('<div>Date ' + esc(q.date || '') + '</div>');
-    out.push('<div>Valid until ' + esc(q.validUntil || '') + '</div>');
+    if (j.due) out.push('<div>Due ' + esc(j.due) + '</div>');
     if (q.preparedBy) out.push('<div>Prepared by ' + esc(q.preparedBy) + '</div>');
     out.push('</div></div>');
 
@@ -66,7 +65,7 @@ QS.printDoc = (function () {
 
       if (hasJob) {
         out.push('<div class="p-col"><h2>Job</h2><p>');
-        if (j.jockey) out.push('Jockey: <b>' + esc(j.jockey) + '</b><br>');
+        if (j.jockey) out.push('Piece: <b>' + esc(j.jockey) + '</b><br>');
         if (j.size) out.push('Size: ' + esc(j.size) + '<br>');
         if (j.due) out.push('Due: <b>' + esc(j.due) + '</b><br>');
         if (j.rush) out.push('<b>RUSH JOB</b>');
@@ -76,22 +75,49 @@ QS.printDoc = (function () {
       out.push('</div>');
     }
 
-    /* silks spec */
-    var rows = [
-      specRow('Body', swatch(s.body, s.bodyName)),
-      specRow('Sleeves', swatch(s.sleeves, s.sleevesName)),
-      specRow('Cap', swatch(s.cap, s.capName)),
-      specRow('Pattern', esc(s.pattern)),
-      specRow('Collar', esc(s.collar)),
-      specRow('Cuffs', esc(s.cuffs)),
-      specRow('Fabric', esc(s.fabric)),
-      specRow('Sets', s.qty ? esc(s.qty) : '')
-    ].filter(Boolean).join('');
-
-    if (rows) {
-      out.push('<div class="p-sec"><h2>Silks specification</h2>');
-      out.push('<div class="p-spec">' + rows + '</div></div>');
+    /* statue paint spec */
+    function paintBlock(title, rows) {
+      var body = rows.filter(Boolean).join('');
+      if (!body) return;
+      out.push('<div class="p-sec"><h2>' + esc(title) + '</h2>');
+      out.push('<div class="p-spec">' + body + '</div></div>');
     }
+
+    paintBlock('Hat', [
+      specRow('Front panel', swatch(p.hat.front, p.hat.frontName)),
+      specRow('Left side', swatch(p.hat.left, p.hat.leftName)),
+      specRow('Right side', swatch(p.hat.right, p.hat.rightName)),
+      specRow('Back panel', swatch(p.hat.back, p.hat.backName)),
+      specRow('Bill', swatch(p.hat.bill, p.hat.billName))
+    ]);
+
+    paintBlock('Jockey', [
+      specRow('Eyes', swatch(p.figure.eyes, p.figure.eyesName)),
+      specRow('Hair', swatch(p.figure.hair, p.figure.hairName)),
+      specRow('Body', swatch(p.figure.body, p.figure.bodyName)),
+      specRow('Sleeves', swatch(p.figure.sleeves, p.figure.sleevesName)),
+      specRow('Cuffs', swatch(p.figure.cuffs, p.figure.cuffsName)),
+      specRow('Buttons', swatch(p.figure.buttons, p.figure.buttonsName)),
+      specRow('Pants', swatch(p.figure.pants, p.figure.pantsName)),
+      specRow('Boots', swatch(p.figure.boots, p.figure.bootsName)),
+      specRow('Boot cuffs', swatch(p.figure.bootCuffs, p.figure.bootCuffsName)),
+      (p.chestLogo || p.chestText)
+        ? specRow('Chest logo', esc(p.chestText) || 'Yes') : '',
+      (p.backArt || p.backText)
+        ? specRow('Back artwork', esc(p.backText) || 'Yes') : ''
+    ]);
+
+    paintBlock('Platform & base', [
+      specRow('Platform', swatch(p.base.platform, p.base.platformName)),
+      specRow('Base', swatch(p.base.base, p.base.baseName)),
+      specRow('Base front text', esc(p.base.frontText)),
+      specRow('Base back text', esc(p.base.backText))
+    ]);
+
+    paintBlock('Custom request', [
+      specRow('Method', esc(p.method)),
+      specRow('Asked for', esc(p.custom))
+    ]);
 
     /* line items */
     out.push('<div class="p-sec"><h2>Items</h2>');

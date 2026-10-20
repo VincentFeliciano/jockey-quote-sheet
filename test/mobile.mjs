@@ -1,6 +1,7 @@
 /* Phone smoke test — drives headless Chrome at iPhone size over CDP.
    Run:  node test/mobile.mjs        (server must be on 127.0.0.1:8789)
-   Exits 0 on pass, 1 on any failure. Writes test/mobile.png + test/mobile-list.png. */
+   Exits 0 on pass, 1 on any failure. Writes test/mobile.png, mobile-list.png,
+   mobile-settings.png. */
 import { spawn } from 'node:child_process';
 import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -67,7 +68,7 @@ await send('Page.navigate', { url: URL });
 for (let i = 0; i < 60; i++) {
   await sleep(250);
   const r = await send('Runtime.evaluate', {
-    expression: "!!(window.QS && document.body && /view-/.test(document.body.className) && document.querySelectorAll('#sections .card').length >= 3)",
+    expression: "!!(window.QS && document.body && /view-/.test(document.body.className) && document.querySelectorAll('#sections .card').length >= 6)",
     returnByValue: true
   }).catch(() => null);
   if (r && r.result && r.result.value) break;
@@ -123,13 +124,43 @@ await check('quote number allocated', "/^JQ-\\d{4}-\\d{3}$/.test(document.getEle
 await check('camera input has capture', "document.getElementById('photoCamera').getAttribute('capture')", 'environment');
 await check('library input allows multiple', "document.getElementById('photoFile').hasAttribute('multiple')", true);
 
+/* ---------- the statue spec ---------- */
+await check('six spec cards', "document.querySelectorAll('#sections .card').length", 6);
+await check('card titles', "(function(){var t=[];document.querySelectorAll('#sections .card h2').forEach(function(h){t.push(h.textContent.trim());});return t.join('|');})()",
+  'Customer|The piece|Hat|Jockey|Platform & base|Custom request');
+await check('hat has five panels', "document.querySelectorAll('#sections input[type=color][data-k^=\"paint.hat.\"]').length", 5);
+await check('jockey has nine colours', "document.querySelectorAll('#sections input[type=color][data-k^=\"paint.figure.\"]').length", 9);
+await check('hat panel names', "(function(){var t=[];document.querySelectorAll('#sections input[type=color][data-k^=\"paint.hat.\"]').forEach(function(i){t.push(i.closest('label').querySelector('span').textContent.trim());});return t.join('|');})()",
+  'Front panel|Left side|Right side|Back panel|Bill');
+await check('platform defaults to green',
+  "document.querySelector('#sections input[data-k=\"paint.base.platform\"]').value", '#2f7d32');
+await check('base defaults to black',
+  "document.querySelector('#sections input[data-k=\"paint.base.base\"]').value", '#000000');
+await check('chest logo switch present', "!!document.querySelector('#sections label[data-k=\"paint.chestLogo\"] input[type=checkbox]')", true);
+await check('back artwork switch present', "!!document.querySelector('#sections label[data-k=\"paint.backArt\"] input[type=checkbox]')", true);
+await check('base front and back text', "(function(){var n=0;document.querySelectorAll('#sections label span').forEach(function(s){if(/^Text on base/.test(s.textContent.trim()))n++;});return n;})()", 2);
+await check('custom request field', "(function(){var l=document.querySelectorAll('#sections label');for(var i=0;i<l.length;i++){var s=l[i].querySelector('span');if(s&&s.textContent.trim()==='What they asked for')return !!l[i].querySelector('textarea');}return false;})()", true);
+await check('method select', "!!document.querySelector('#sections select')", true);
+await check('no valid-until field', "!!document.getElementById('metaValid')", false);
+await check('meta row is number, status, prepared by',
+  "(function(){return document.querySelectorAll('.doc-head .meta-row label').length;})()", 3);
+await check('prepared by is Vincent', "document.getElementById('metaPreparedBy').value", 'Vincent Feliciano');
+await check('no silks section left', "/silks/i.test(document.getElementById('sections').innerText)", false);
+
 /* ---------- fill a quote ---------- */
 await evalJs(setField('Name', 'Vince Test'));
-await evalJs(setField('Stable / Owner', 'Test Stable'));
-await evalJs(setField('Jockey', 'R. Santana'));
+await evalJs(setField('Business / owner', 'Crafters Gallery'));
+await evalJs(setField('Piece', 'Stocky the Jockey — 3 ft'));
 await evalJs(setField('Due date', '2026-11-02'));
+await evalJs(setField('Platform', '#1f7a3a'));
+await evalJs(setField('Bill', '#ffd60a'));
+await evalJs(setField('Boots', '#1a1a1a'));
 await sleep(1000);
 await check('customer name in title', "document.getElementById('dTitle').textContent", 'Vince Test');
+await check('hat bill colour kept',
+  "document.querySelector('#sections input[data-k=\"paint.hat.bill\"]').value", '#ffd60a');
+await check('platform colour kept',
+  "document.querySelector('#sections input[data-k=\"paint.base.platform\"]').value", '#1f7a3a');
 
 /* ---------- camera photo through the real file input ---------- */
 const iconPath = resolve('icons/icon-192.png');
@@ -143,8 +174,8 @@ await check('photo stored against the quote',
   "(async function(){var qs=await QS.store.listQuotes();var ps=await QS.store.photosFor(qs[0].id);return ps.length;})()", 1);
 
 /* ---------- work card ---------- */
-await evalJs(`document.getElementById('taskInput').value='Cut fabric'; document.getElementById('btnAddTask').click(); true`);
-await evalJs(`document.getElementById('taskInput').value='Embroidery'; document.getElementById('btnAddTask').click(); true`);
+await evalJs(`document.getElementById('taskInput').value='Prime'; document.getElementById('btnAddTask').click(); true`);
+await evalJs(`document.getElementById('taskInput').value='Stencil and top coat'; document.getElementById('btnAddTask').click(); true`);
 await sleep(400);
 await check('two tasks listed', "document.querySelectorAll('#taskList .task').length", 2);
 await evalJs(`document.querySelectorAll('#taskList .task input[type=checkbox]')[0].click()`);
@@ -196,45 +227,80 @@ await check('search field full width', "Math.round(document.getElementById('sear
 await check('row buttons are touch sized',
   "Math.min.apply(null, Array.from(document.querySelectorAll('#workList .tool')).map(function(b){return b.getBoundingClientRect().height})) >= 32", true);
 
-/* ---------- repo sync panel ---------- */
-await evalJs("document.getElementById('btnBack').click(); 'ok'");
+/* ---------- the list is down to one action: Save ---------- */
+await check('list Save button', "document.getElementById('btnSaveAll').textContent.trim()", 'Save');
+await check('only one main action on the list',
+  "document.querySelectorAll('.list-tools-main button').length", 1);
+await check('no repo fields on the list screen',
+  "document.querySelectorAll('#screenList input#syncToken').length", 0);
+await check('settings button is touch sized',
+  "Math.round(document.getElementById('btnSettings').getBoundingClientRect().width) >= 44", true);
+
+/* ---------- settings screen ---------- */
+await evalJs(`document.getElementById('btnSettings').click()`);
 await sleep(500);
-await check('list screen is showing', "document.getElementById('screenList').getBoundingClientRect().width", 390);
-await check('list Save button',
-  "document.getElementById('btnSaveAll').textContent.trim()", 'Save');
-await check('repo sync panel present',
-  "!!document.getElementById('syncToken') && /Repo sync/i.test(document.getElementById('syncBox').innerText)", true);
-await evalJs("document.getElementById('syncBox').open = true; 'ok'");
-await sleep(350);
-await check('sync panel expands',
-  "document.getElementById('syncBox').getBoundingClientRect().height > 200", true);
-await check('sync fields go full width when open',
-  "(function(){var i=document.getElementById('syncToken').getBoundingClientRect();var p=document.querySelector('#syncBox .sync-row').getBoundingClientRect();return i.width > 100 && Math.abs(i.width - p.width) <= 2;})()", true);
-await check('sync panel does not spill',
-  "(function(){var vw=document.documentElement.clientWidth;var bad=0;document.querySelectorAll('#syncBox *').forEach(function(n){var r=n.getBoundingClientRect();if(r.width>0&&r.right>vw+0.5)bad++;});return bad;})()", 0);
-await check('list does not spill with panel open',
-  "(function(){var vw=document.documentElement.clientWidth;var bad=0;document.querySelectorAll('#screenList *').forEach(function(n){var r=n.getBoundingClientRect();if(r.width>0&&r.right>vw+0.5)bad++;});return bad;})()", 0);
-await evalJs("document.getElementById('syncBox').open = false; 'ok'");
+await check('settings opens', "document.body.classList.contains('view-settings')", true);
+await check('settings screen visible', "getComputedStyle(document.getElementById('screenSettings')).display", 'flex');
+await check('list hidden behind settings', "getComputedStyle(document.getElementById('screenList')).display", 'none');
+await check('token field lives in settings', "!!document.getElementById('syncToken')", true);
+await check('repo defaults', "document.getElementById('syncOwner').value + '/' + document.getElementById('syncRepo').value + '@' + document.getElementById('syncBranch').value",
+  'VincentFeliciano/jockey-quote-sheet@main');
+await check('settings does not spill',
+  "(function(){var vw=document.documentElement.clientWidth;var bad=0;document.querySelectorAll('#screenSettings *').forEach(function(n){var r=n.getBoundingClientRect();if(r.width>0&&r.right>vw+0.5)bad++;});return bad;})()", 0);
+await check('settings headings', "(function(){var t=[];document.querySelectorAll('#screenSettings .card h2').forEach(function(h){t.push(h.textContent.trim());});return t.join('|');})()", 'Repo sync|Backup');
+await check('token field is masked', "document.getElementById('syncToken').type", 'password');
+await check('backup controls in settings', "!!document.getElementById('btnDownload') && !!document.getElementById('btnImport')", true);
+await evalJs(`document.getElementById('btnSettingsBack').click()`);
+await sleep(500);
+await check('back from settings to list', "document.body.classList.contains('view-list')", true);
 
 /* ---------- screenshots ---------- */
 await evalJs(`document.getElementById('btnNew').click()`);
 await sleep(1000);
 await evalJs(setField('Name', 'Crafters Gallery'));
-await evalJs(`document.getElementById('taskInput').value='Cut fabric'; document.getElementById('btnAddTask').click();
-  document.getElementById('taskInput').value='Embroidery'; document.getElementById('btnAddTask').click();
-  document.getElementById('taskInput').value='Post out'; document.getElementById('btnAddTask').click(); true`);
+await evalJs(setField('Piece', 'Stocky the Jockey — 3 ft'));
+await evalJs(setField('Business / owner', 'Crafters Gallery'));
+await evalJs(`document.getElementById('taskInput').value='Prime'; document.getElementById('btnAddTask').click();
+  document.getElementById('taskInput').value='Stencil'; document.getElementById('btnAddTask').click();
+  document.getElementById('taskInput').value='Top coat'; document.getElementById('btnAddTask').click(); true`);
 await sleep(1000);
 const shot = await send('Page.captureScreenshot', { format: 'png' });
 writeFileSync(resolve('test/mobile.png'), Buffer.from(shot.data, 'base64'));
+
+await evalJs(`document.querySelector('#sections .card:nth-child(3)').scrollIntoView({block:'start'}); true`);
+await sleep(600);
+const shotSpec = await send('Page.captureScreenshot', { format: 'png' });
+writeFileSync(resolve('test/mobile-spec.png'), Buffer.from(shotSpec.data, 'base64'));
 
 await evalJs(`document.getElementById('btnBack').click()`);
 await sleep(700);
 const shot2 = await send('Page.captureScreenshot', { format: 'png' });
 writeFileSync(resolve('test/mobile-list.png'), Buffer.from(shot2.data, 'base64'));
 
+await evalJs(`document.getElementById('btnSettings').click()`);
+await sleep(600);
+const shot3 = await send('Page.captureScreenshot', { format: 'png' });
+writeFileSync(resolve('test/mobile-settings.png'), Buffer.from(shot3.data, 'base64'));
+await evalJs(`document.getElementById('btnSettingsBack').click()`);
+await sleep(400);
+
+/* ---------- setup link still lands on the token box ---------- */
+await send('Page.navigate', { url: URL + '#setup' });
+for (let i = 0; i < 40; i++) {
+  await sleep(250);
+  const r = await send('Runtime.evaluate', {
+    expression: "!!(window.QS && document.body && /view-settings/.test(document.body.className))",
+    returnByValue: true
+  }).catch(() => null);
+  if (r && r.result && r.result.value) break;
+}
+await check('setup link opens settings', "document.body.classList.contains('view-settings')", true);
+await check('setup link clears itself from the URL', "/setup/.test(location.hash)", false);
+
+/* ---------- overflow sweep ---------- */
 const overflow = await evalJs(`(function(){
   var wide = [];
-  document.querySelectorAll('#screenList *, #screenDetail *').forEach(function(n){
+  document.querySelectorAll('#screenList *, #screenDetail *, #screenSettings *').forEach(function(n){
     var r = n.getBoundingClientRect();
     if (r.width > 0 && r.right > window.innerWidth + 2) wide.push(n.className || n.tagName);
   });
@@ -248,4 +314,3 @@ console.log('\n' + (checks - failures) + '/' + checks + ' checks passed');
 ws.close();
 chrome.kill();
 process.exit(failures ? 1 : 0);
-

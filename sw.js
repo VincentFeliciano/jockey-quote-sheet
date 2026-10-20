@@ -1,5 +1,5 @@
 /* Offline shell. The shop has bad signal; the app should still open. */
-var CACHE = 'quote-sheet-v3';
+var CACHE = 'quote-sheet-v4';
 var SHELL = [
   './',
   'index.html',

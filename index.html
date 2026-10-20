@@ -8,7 +8,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Quote Sheet">
-<meta name="description" content="Jockey quote sheet — quotes, work in progress and photos, on your phone.">
+<meta name="description" content="Jockey quote sheet — painted statue quotes, work in progress and photos, on your phone.">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <link rel="icon" href="icons/icon-192.png">
@@ -24,12 +24,15 @@
       <span class="logo">&#9670;</span>
       <strong>Quote Sheet</strong>
     </div>
-    <button id="btnNew" class="btn primary" type="button">+ New</button>
+    <div class="bar-tools">
+      <button id="btnSettings" class="btn icon" type="button" aria-label="Settings">&#9881;</button>
+      <button id="btnNew" class="btn primary" type="button">+ New</button>
+    </div>
   </header>
 
   <div class="scroller" id="listScroll">
     <div class="pad">
-      <input id="search" class="search" type="search" placeholder="Search name, jockey, number&hellip;" autocomplete="off">
+      <input id="search" class="search" type="search" placeholder="Search name, piece, number&hellip;" autocomplete="off">
 
       <div class="side-group work-group">
         <div class="side-head">
@@ -48,29 +51,9 @@
         <ul id="prevList" class="qlist prev"></ul>
       </div>
 
-      <div class="list-tools">
-        <button id="btnSaveAll" class="btn primary" type="button">Save</button>
-        <button id="btnPull" class="btn small" type="button">Pull from repo</button>
-        <button id="btnDownload" class="btn small" type="button">Download a copy</button>
-        <button id="btnImport" class="btn small" type="button">Restore file</button>
-        <input type="file" id="importFile" accept="application/json,.json" hidden>
+      <div class="list-tools list-tools-main">
+        <button id="btnSaveAll" class="btn primary wide-btn" type="button">Save</button>
       </div>
-
-      <details id="syncBox" class="card sync-card">
-        <summary>Repo sync</summary>
-        <p class="fine">Save pushes the sheet to GitHub and Pull reads it back, so the repo is the master copy. Needs a fine-grained token with <strong>Contents: read &amp; write</strong> on this one repo. It stays on this phone.</p>
-        <label class="sync-row">Owner <input id="syncOwner" type="text" autocomplete="off" spellcheck="false"></label>
-        <label class="sync-row">Repo <input id="syncRepo" type="text" autocomplete="off" spellcheck="false"></label>
-        <label class="sync-row">Branch <input id="syncBranch" type="text" autocomplete="off" spellcheck="false"></label>
-        <label class="sync-row">Token <input id="syncToken" type="password" autocomplete="off" spellcheck="false" placeholder="github_pat_&hellip;"></label>
-        <button id="btnSyncPaste" class="btn small" type="button">Paste token from clipboard</button>
-        <div class="list-tools">
-          <button id="btnSyncSave" class="btn small" type="button">Save settings</button>
-          <button id="btnSyncPull" class="btn small" type="button">Pull now</button>
-          <button id="btnSyncForget" class="btn small" type="button">Forget token</button>
-        </div>
-        <div id="syncState" class="fine"></div>
-      </details>
 
       <div class="list-foot"><span id="savedNote">Ready</span></div>
     </div>
@@ -94,10 +77,6 @@
       <div class="doc-head">
         <div class="meta-row">
           <label>Number <input id="metaNumber" type="text" readonly></label>
-          <label>Date <input id="metaDate" type="date"></label>
-          <label>Valid until <input id="metaValid" type="date"></label>
-        </div>
-        <div class="meta-row">
           <label>Status
             <select id="status" class="status-select">
               <option value="draft">Draft</option>
@@ -108,7 +87,7 @@
               <option value="paid">Paid</option>
             </select>
           </label>
-          <label>Prepared by <input id="metaPreparedBy" type="text" placeholder="Your name"></label>
+          <label>Prepared by <input id="metaPreparedBy" type="text" placeholder="Vincent Feliciano"></label>
         </div>
       </div>
 
@@ -133,7 +112,7 @@
         </div>
 
         <div class="task-add">
-          <input id="taskInput" type="text" placeholder="Add a step &mdash; cut fabric, embroidery&hellip;">
+          <input id="taskInput" type="text" placeholder="Add a step &mdash; prime, stencil, top coat&hellip;">
           <button id="btnAddTask" class="btn small" type="button">Add</button>
         </div>
         <ul id="taskList" class="tasks"></ul>
@@ -202,14 +181,55 @@
         <h2>Sheet</h2>
         <div class="list-tools">
           <button id="btnPrint" class="btn small" type="button">Print / PDF</button>
-          <button id="btnExport2" class="btn primary small" type="button">Save to repo</button>
-          <button id="btnDownload2" class="btn small" type="button">Download a copy</button>
-          <button id="btnImport2" class="btn small" type="button">Restore file</button>
         </div>
-        <p class="fine">Saved on this phone as you type. Save pushes the master copy to GitHub; Pull on the list screen brings down anything changed elsewhere.</p>
+        <p class="fine">Saved on this phone as you type. <strong>Save</strong> writes it to the repo, which is the master copy.</p>
       </section>
 
       <div class="bottom-space"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= SETTINGS SCREEN ================= -->
+<section id="screenSettings" class="screen screen-settings">
+  <header class="bar detail-bar">
+    <button id="btnSettingsBack" class="btn icon" type="button" aria-label="Back to list">&#8592;</button>
+    <div class="detail-title">
+      <strong>Settings</strong>
+      <span class="qno">repo &amp; backup</span>
+    </div>
+  </header>
+
+  <div class="scroller" id="settingsScroll">
+    <div class="pad">
+
+      <section id="syncBox" class="card sync-card">
+        <h2>Repo sync</h2>
+        <p class="fine">Save pushes the sheet to GitHub and opening the app reads it back, so the repo is the master copy. Needs a fine-grained token with <strong>Contents: read &amp; write</strong> on this one repo. It stays on this phone.</p>
+        <label class="sync-row">Owner <input id="syncOwner" type="text" autocomplete="off" spellcheck="false"></label>
+        <label class="sync-row">Repo <input id="syncRepo" type="text" autocomplete="off" spellcheck="false"></label>
+        <label class="sync-row">Branch <input id="syncBranch" type="text" autocomplete="off" spellcheck="false"></label>
+        <label class="sync-row">Token <input id="syncToken" type="password" autocomplete="off" spellcheck="false" placeholder="github_pat_&hellip;"></label>
+        <button id="btnSyncPaste" class="btn small" type="button">Paste token from clipboard</button>
+        <div class="list-tools">
+          <button id="btnSyncSave" class="btn primary small" type="button">Save settings</button>
+          <button id="btnSyncPull" class="btn small" type="button">Pull now</button>
+          <button id="btnSyncForget" class="btn small" type="button">Forget token</button>
+        </div>
+        <div id="syncState" class="fine"></div>
+      </section>
+
+      <section class="card">
+        <h2>Backup</h2>
+        <div class="list-tools">
+          <button id="btnDownload" class="btn small" type="button">Download a copy</button>
+          <button id="btnImport" class="btn small" type="button">Restore file</button>
+        </div>
+        <input type="file" id="importFile" accept="application/json,.json" hidden>
+        <p class="fine">A file copy of everything on this phone, photos included. Not needed for day-to-day — the repo holds the master copy.</p>
+      </section>
+
+      <div class="list-foot"><span id="settingsNote">Repo and backup</span></div>
     </div>
   </div>
 </section>

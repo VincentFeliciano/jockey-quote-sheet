@@ -33,7 +33,7 @@ QS.ui = (function () {
       var wrap = el('div', { class: 'colorfield' });
       var picker = el('input', { type: 'color', 'data-k': f.k });
       picker.value = /^#[0-9a-f]{6}$/i.test(val || '') ? val : '#ffffff';
-      var nameIn = el('input', { type: 'text', 'data-k': f.k + 'Name', placeholder: 'royal blue' });
+      var nameIn = el('input', { type: 'text', 'data-k': f.k + 'Name', placeholder: 'color name' });
       nameIn.value = QS.getPath(quote, f.k + 'Name') || '';
       picker.addEventListener('input', function () { onInput(f.k, picker.value); });
       nameIn.addEventListener('input', function () { onInput(f.k + 'Name', nameIn.value); });
