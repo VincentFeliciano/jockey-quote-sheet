@@ -584,6 +584,24 @@
     note('New quote ' + q.number);
   }
 
+  /* ---------- setup link ---------- */
+  /* #setup jumps to the repo panel and focuses the token box. Runs at boot AND on
+     hashchange, so tapping the link while the app is already open still works. */
+  function applySetupLink() {
+    if (!/#setup\b/.test(location.hash || '')) return false;
+    if (dom && dom.workList) { setView('list'); renderList(); }
+    var sbox = $('syncBox');
+    if (sbox) {
+      sbox.open = true;
+      try { sbox.scrollIntoView({ block: 'center' }); } catch (e) {}
+      var tin = $('syncToken');
+      if (tin) setTimeout(function () { try { tin.focus(); } catch (e) {} }, 200);
+      if (dom && dom.workList) note('Paste the token, then Save settings');
+    }
+    try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {}
+    return true;
+  }
+
   /* ---------- boot ---------- */
 
   async function boot() {
@@ -840,19 +858,7 @@
     }
 
     /* setup link: #setup opens the repo panel with the token box ready */
-    if (/#setup\b/.test(location.hash || '')) {
-      setView('list');
-      renderList();
-      var sbox = $('syncBox');
-      if (sbox) {
-        sbox.open = true;
-        try { sbox.scrollIntoView({ block: 'center' }); } catch (e) {}
-        var tin = $('syncToken');
-        if (tin) setTimeout(function () { try { tin.focus(); } catch (e) {} }, 200);
-        note('Paste the token, then Save settings');
-      }
-      try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {}
-    }
+    applySetupLink();
 
     fillSyncFields();
     renderSyncState();
@@ -883,4 +889,9 @@
   } else {
     boot();
   }
+
+  /* tapping the setup link while the app is already open only fires hashchange */
+  window.addEventListener('hashchange', function () {
+    if (dom && dom.workList) applySetupLink();
+  });
 })();
