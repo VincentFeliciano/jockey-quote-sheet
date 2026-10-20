@@ -18,13 +18,35 @@ Same look as the desktop sheet: black, shades of grey, one yellow.
   camera roll, or from anything you saved out of a text or an email. Photos are
   downscaled to 1600px and stored on the device.
 - **Print / PDF** — the whole sheet as a clean document.
-- **Backup / Restore** — one JSON file with every quote and photo.
+- **Save** — one button that writes to the phone *and* pushes the master copy to
+  GitHub. **Pull from repo** brings down anything changed elsewhere.
+- **Download a copy** — the old backup file, for a belt-and-braces export.
+- **Restore file** — read a backup file back in.
 
 ## Where the data lives
 
-On the device, in IndexedDB. Nothing is sent anywhere — there is no server and no
-account. That also means: **clear the browser data and it is gone**, and a quote
-typed on the phone is not on the laptop. Use Backup to move between them.
+Two copies, one master:
+
+| Where | What | Notes |
+| --- | --- | --- |
+| The repo | `data/quotes.json`, `data/photos.json`, `data/photos/*.jpg` | The master copy. Pull reads it; Save writes it. |
+| The phone | IndexedDB | Works with no signal. Autosaves as you type. |
+
+Photos are committed as separate files, written once and never rewritten, so the
+repo does not grow every time you hit Save — only the small `quotes.json` changes.
+
+**Repo sync setup (once per device).** Open **Repo sync** at the bottom of the list
+screen and paste a GitHub **fine-grained token** with *Contents: Read and write* on
+`VincentFeliciano/jockey-quote-sheet` only. It is kept in `localStorage` on that
+device and nowhere else. Anyone holding the phone can read it, so give it an expiry
+date and revoke it at github.com/settings/personal-access-tokens if the phone goes
+missing.
+
+There is also a one-tap form of the same thing:
+`…/jockey-quote-sheet/#sync=owner/repo/branch/<token>` stores the token and then
+scrubs it from the address bar.
+
+Without a token the app still works — Save just keeps everything on the phone.
 
 ## Using it on the phone
 
@@ -45,8 +67,14 @@ typed on the phone is not on the laptop. Use Backup to move between them.
 ```
 python -m http.server 8789 --bind 127.0.0.1
 node test/mobile.mjs      # 33 checks at 390x844, writes test/mobile.png + mobile-list.png
+node test/sync.mjs        # 21 checks: real Save push + pull against a throwaway branch
+node test/seed.mjs        # writes the empty data/ files into the repo if missing
 node test/probe.mjs       # dumps element rects for layout inspection
 ```
+
+`test/sync.mjs` reads a token from the git credential helper, creates a `sync-test`
+branch, drives the real Save button in headless Chrome, verifies the commit landed,
+pulls it back into an empty store, then deletes the branch. It never prints the token.
 
 ## Files
 

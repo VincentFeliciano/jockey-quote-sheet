@@ -71,6 +71,95 @@
     note('Saved');
   }
 
+  /* ---------- repo sync ---------- */
+
+  function renderSyncState(err) {
+    var box = $('syncState');
+    if (!box) return;
+    box.classList.toggle('bad', !!err);
+    if (err) { box.textContent = err; return; }
+    if (!QS.sync.isConfigured()) {
+      box.textContent = 'No token — Save keeps this phone only.';
+      return;
+    }
+    var c = QS.sync.cfg();
+    QS.sync.lastSync().then(function (at) {
+      var when = at ? new Date(at).toLocaleString() : 'never';
+      box.textContent = c.owner + '/' + c.repo + ' @ ' + c.branch + ' — last sync ' + when;
+    });
+  }
+
+  function fillSyncFields() {
+    var c = QS.sync.cfg();
+    if ($('syncOwner')) $('syncOwner').value = c.owner;
+    if ($('syncRepo')) $('syncRepo').value = c.repo;
+    if ($('syncBranch')) $('syncBranch').value = c.branch;
+    if ($('syncToken')) $('syncToken').value = c.token;
+  }
+
+  function saveSyncSettings() {
+    var patch = {
+      owner: $('syncOwner').value,
+      repo: $('syncRepo').value,
+      branch: $('syncBranch').value,
+      token: $('syncToken').value
+    };
+    try {
+      QS.sync.saveCfg(patch);
+    } catch (e) {
+      return renderSyncState('Could not store the token on this device.');
+    }
+    fillSyncFields();
+    renderSyncState();
+    note(QS.sync.isConfigured() ? 'Repo linked' : 'No token yet');
+  }
+
+  async function pushNow() {
+    await saveNow();
+    if (!QS.sync.isConfigured()) {
+      note('Saved on phone — no repo token yet');
+      renderSyncState();
+      return;
+    }
+    try {
+      note('Pushing to repo…', true);
+      var r = await QS.sync.push(function (m) { note(m, true); });
+      state.all = await QS.store.listQuotes();
+      renderList();
+      renderSyncState();
+      note('Saved to repo' + (r.uploaded ? ' + ' + r.uploaded + ' photo(s)' : ''));
+    } catch (e) {
+      renderSyncState(e.message);
+      note('On phone only — push failed', true);
+    }
+  }
+
+  async function pullNow() {
+    if (!QS.sync.isConfigured()) {
+      renderSyncState('Paste a token first.');
+      return;
+    }
+    try {
+      note('Pulling from repo…', true);
+      var r = await QS.sync.pull(function (m) { note(m, true); });
+      state.all = await QS.store.listQuotes();
+      renderList();
+      if (state.quote) {
+        var fresh = await QS.store.getQuote(state.quote.id);
+        if (fresh && !state.dirty) {
+          state.quote = fresh;
+          state.photos = await QS.store.photosFor(fresh.id);
+          renderAll();
+        }
+      }
+      renderSyncState();
+      note('Pulled ' + r.quotes + ' quote(s)' + (r.downloaded ? ', ' + r.downloaded + ' photo(s)' : ''));
+    } catch (e) {
+      renderSyncState(e.message);
+      note('Pull failed', true);
+    }
+  }
+
   /* ---------- totals ---------- */
 
   function renderTotals() {
@@ -586,10 +675,21 @@
     });
 
     /* buttons */
-    $('btnSave').addEventListener('click', saveNow);
+    $('btnSave').addEventListener('click', pushNow);
     $('btnPrint').addEventListener('click', printNow);
-    $('btnExport').addEventListener('click', exportBackup);
-    $('btnExport2').addEventListener('click', exportBackup);
+    $('btnSaveAll').addEventListener('click', pushNow);
+    $('btnExport2').addEventListener('click', pushNow);
+    $('btnDownload').addEventListener('click', exportBackup);
+    $('btnDownload2').addEventListener('click', exportBackup);
+    $('btnPull').addEventListener('click', pullNow);
+    $('btnSyncSave').addEventListener('click', saveSyncSettings);
+    $('btnSyncPull').addEventListener('click', pullNow);
+    $('btnSyncForget').addEventListener('click', function () {
+      QS.sync.saveCfg({ token: '' });
+      fillSyncFields();
+      renderSyncState();
+      note('Token removed from this phone');
+    });
     $('btnImport').addEventListener('click', function () { $('importFile').click(); });
     $('btnImport2').addEventListener('click', function () { $('importFile').click(); });
     $('importFile').addEventListener('change', function (e) {
@@ -670,7 +770,7 @@
     /* shortcuts */
     document.addEventListener('keydown', function (e) {
       if (!(e.ctrlKey || e.metaKey)) return;
-      if (e.key === 's') { e.preventDefault(); saveNow(); }
+      if (e.key === 's') { e.preventDefault(); pushNow(); }
       if (e.key === 'p') { e.preventDefault(); printNow(); }
     });
     window.addEventListener('beforeunload', function (e) {
@@ -706,6 +806,46 @@
     }
 
     note(QS.store.isMemoryOnly() ? 'Storage blocked — take a backup!' : 'Ready', QS.store.isMemoryOnly());
+
+    /* repo sync: fields, status, and a quiet pull so the repo is the master copy */
+    /* one-tap setup link: #sync=owner/repo/branch/token — stored, then scrubbed */
+    var link = /#sync=([^&]+)/.exec(location.hash || '');
+    if (link) {
+      var parts = decodeURIComponent(link[1]).split('/');
+      if (parts.length >= 4) {
+        try {
+          QS.sync.saveCfg({
+            owner: parts[0], repo: parts[1], branch: parts[2],
+            token: parts.slice(3).join('/')
+          });
+          note('Repo linked');
+        } catch (e) { /* storage blocked */ }
+      }
+      try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {}
+    }
+
+    fillSyncFields();
+    renderSyncState();
+    if (QS.sync.isConfigured()) {
+      note('Pulling from repo…', true);
+      QS.sync.pull(function (msg) { note(msg, true); }).then(async function (r) {
+        state.all = await QS.store.listQuotes();
+        renderList();
+        if (state.quote && !state.dirty) {
+          var fresh = await QS.store.getQuote(state.quote.id);
+          if (fresh) {
+            state.quote = fresh;
+            state.photos = await QS.store.photosFor(fresh.id);
+            renderAll();
+          }
+        }
+        renderSyncState();
+        note(r.changed ? 'Pulled ' + r.changed + ' change(s)' : 'Up to date');
+      }).catch(function (e) {
+        renderSyncState(e.message);
+        note('Offline — using the phone copy');
+      });
+    }
   }
 
   if (document.readyState === 'loading') {

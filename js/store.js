@@ -85,6 +85,15 @@ QS.store = (function () {
     return q;
   }
 
+  /* Write a record exactly as given — sync uses this so merging remote data
+     does not stamp `updated` and make every quote look freshly edited. */
+  async function putQuoteRaw(q) {
+    await open();
+    if (memoryOnly) { mem.quotes[q.id] = q; return q; }
+    await req(tx('quotes', 'readwrite').put(q));
+    return q;
+  }
+
   async function deleteQuote(id) {
     await open();
     if (memoryOnly) { delete mem.quotes[id]; return; }
@@ -147,6 +156,7 @@ QS.store = (function () {
     listQuotes: listQuotes,
     getQuote: getQuote,
     putQuote: putQuote,
+    putQuoteRaw: putQuoteRaw,
     deleteQuote: deleteQuote,
     photosFor: photosFor,
     allPhotos: allPhotos,

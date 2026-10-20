@@ -507,6 +507,33 @@ input[type="color"] { min-height: 42px; padding: 3px; width: 56px; flex: 0 0 56p
 
 .bottom-space { height: 24px; }
 
+/* ---------- repo sync ---------- */
+
+.sync-card { margin-top: 14px; padding: 0; }
+.sync-card > summary {
+  list-style: none; cursor: pointer;
+  padding: 14px;
+  font-size: 11px; letter-spacing: .14em; text-transform: uppercase;
+  color: var(--muted);
+}
+.sync-card > summary::-webkit-details-marker { display: none; }
+.sync-card > summary::before { content: "\25B8"; color: var(--yellow); font-size: 10px; margin-right: 8px; }
+.sync-card[open] > summary { border-bottom: 1px solid var(--line); color: var(--yellow); }
+.sync-card[open] > summary::before { content: "\25BE"; }
+.sync-card > p,
+.sync-card > .list-tools,
+.sync-card > .sync-row,
+.sync-card > #syncState { margin-left: 14px; margin-right: 14px; }
+.sync-card > .list-tools { margin-bottom: 14px; }
+.sync-row {
+  display: flex; flex-direction: column; gap: 4px; padding: 6px 0;
+  font-size: 10px; letter-spacing: .12em; text-transform: uppercase;
+  color: var(--muted);
+}
+.sync-row input { text-transform: none; letter-spacing: 0; }
+#syncState { padding-bottom: 14px; word-break: break-word; }
+#syncState.bad { color: var(--yellow); }
+
 /* ---------- print ---------- */
 
 .print-only { display: none; }
