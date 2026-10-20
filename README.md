@@ -66,7 +66,7 @@ Without a token the app still works — Save just keeps everything on the phone.
 
 ```
 python -m http.server 8789 --bind 127.0.0.1
-node test/mobile.mjs      # 37 checks at 390x844, writes test/mobile.png + mobile-list.png
+node test/mobile.mjs      # 40 checks at 390x844, writes test/mobile.png + mobile-list.png
 node test/sync.mjs        # 21 checks: real Save push + pull against a throwaway branch
 node test/seed.mjs        # writes the empty data/ files into the repo if missing
 node test/probe.mjs       # dumps element rects for layout inspection

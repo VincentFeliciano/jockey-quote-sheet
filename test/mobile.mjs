@@ -197,16 +197,23 @@ await check('row buttons are touch sized',
   "Math.min.apply(null, Array.from(document.querySelectorAll('#workList .tool')).map(function(b){return b.getBoundingClientRect().height})) >= 32", true);
 
 /* ---------- repo sync panel ---------- */
+await evalJs("document.getElementById('btnBack').click(); 'ok'");
+await sleep(500);
+await check('list screen is showing', "document.getElementById('screenList').getBoundingClientRect().width", 390);
 await check('list Save button',
   "document.getElementById('btnSaveAll').textContent.trim()", 'Save');
 await check('repo sync panel present',
   "!!document.getElementById('syncToken') && /Repo sync/i.test(document.getElementById('syncBox').innerText)", true);
 await evalJs("document.getElementById('syncBox').open = true; 'ok'");
 await sleep(350);
+await check('sync panel expands',
+  "document.getElementById('syncBox').getBoundingClientRect().height > 200", true);
 await check('sync fields go full width when open',
-  "(function(){var i=document.getElementById('syncToken').getBoundingClientRect();var p=document.querySelector('#syncBox .sync-row').getBoundingClientRect();return i.width >= p.width - 2;})()", true);
+  "(function(){var i=document.getElementById('syncToken').getBoundingClientRect();var p=document.querySelector('#syncBox .sync-row').getBoundingClientRect();return i.width > 100 && Math.abs(i.width - p.width) <= 2;})()", true);
 await check('sync panel does not spill',
   "(function(){var vw=document.documentElement.clientWidth;var bad=0;document.querySelectorAll('#syncBox *').forEach(function(n){var r=n.getBoundingClientRect();if(r.width>0&&r.right>vw+0.5)bad++;});return bad;})()", 0);
+await check('list does not spill with panel open',
+  "(function(){var vw=document.documentElement.clientWidth;var bad=0;document.querySelectorAll('#screenList *').forEach(function(n){var r=n.getBoundingClientRect();if(r.width>0&&r.right>vw+0.5)bad++;});return bad;})()", 0);
 await evalJs("document.getElementById('syncBox').open = false; 'ok'");
 
 /* ---------- screenshots ---------- */
