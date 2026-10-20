@@ -21,7 +21,7 @@
 <section id="screenList" class="screen screen-list">
   <header class="bar">
     <div class="brand">
-      <span class="logo">&#9670;</span>
+      <img class="plymr" src="icons/plymr.png" alt="PLYMR" width="70" height="24">
       <strong>Quote Sheet</strong>
     </div>
     <div class="bar-tools">
@@ -139,7 +139,36 @@
       </section>
 
       <section class="card">
-        <h2>Line items</h2>
+        <h2>Paint job</h2>
+        <div id="tierRow" class="tiers" role="group" aria-label="Paint job"></div>
+
+        <div class="decal-row">
+          <span class="decal-label">Decals <em id="decalRate">$10 each</em></span>
+          <div class="stepper">
+            <button id="btnDecalMinus" class="btn step-btn" type="button" aria-label="One fewer decal">&minus;</button>
+            <output id="decalCount" aria-live="polite">0</output>
+            <button id="btnDecalPlus" class="btn step-btn" type="button" aria-label="One more decal">+</button>
+          </div>
+        </div>
+        <label class="decal-where">Where
+          <input id="decalWhere" type="text" placeholder="Front, back, bottom&hellip;">
+        </label>
+
+        <label class="trow toggle-row">
+          <span>Delivery</span>
+          <em id="deliveryRate">$50</em>
+          <input id="delivery" type="checkbox">
+        </label>
+
+        <div class="price-lines">
+          <div class="trow"><span>Paint job</span><output id="pPaint">$0.00</output></div>
+          <div class="trow"><span>Decals</span><output id="pDecals">$0.00</output></div>
+          <div class="trow"><span>Delivery</span><output id="pDelivery">$0.00</output></div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Extras <span class="hint">anything else you charge for</span></h2>
         <table class="items">
           <thead>
             <tr>

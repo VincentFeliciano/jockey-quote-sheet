@@ -119,19 +119,36 @@ QS.printDoc = (function () {
       specRow('Asked for', esc(p.custom))
     ]);
 
-    /* line items */
-    out.push('<div class="p-sec"><h2>Items</h2>');
-    out.push('<table class="p-items"><thead><tr>');
-    out.push('<th>Description</th><th class="num">Qty</th><th class="num">Unit</th><th class="num">Amount</th>');
-    out.push('</tr></thead><tbody>');
-    (q.items || []).forEach(function (it) {
-      var amt = (Number(it.qty) || 0) * (Number(it.unit) || 0);
-      out.push('<tr><td>' + esc(it.desc) + '</td>' +
-        '<td class="num">' + (it.qty === '' ? '' : esc(it.qty)) + '</td>' +
-        '<td class="num">' + QS.money(it.unit) + '</td>' +
-        '<td class="num">' + QS.money(amt) + '</td></tr>');
-    });
-    out.push('</tbody></table>');
+    /* pricing: paint job, decals, delivery */
+    out.push('<div class="p-sec"><h2>Pricing</h2>');
+    out.push('<table class="p-items"><tbody>');
+    out.push('<tr><td>Paint job' + (t.paintLabel ? ' &mdash; ' + esc(t.paintLabel) : '') +
+      '</td><td class="num">' + QS.money(t.paint) + '</td></tr>');
+    if (t.decalCount) {
+      var pr = QS.fillPricing(q.pricing);
+      var dw = pr.decalWhere ? ' (' + esc(pr.decalWhere) + ')' : '';
+      out.push('<tr><td>Decals &times;' + t.decalCount + dw + '</td>' +
+        '<td class="num">' + QS.money(t.decals) + '</td></tr>');
+    }
+    out.push('<tr><td>Delivery</td><td class="num">' +
+      (t.delivery ? QS.money(t.delivery) : '&mdash;') + '</td></tr>');
+    out.push('</tbody></table></div>');
+
+    /* extras */
+    if ((q.items || []).length) {
+      out.push('<div class="p-sec"><h2>Extras</h2>');
+      out.push('<table class="p-items"><thead><tr>');
+      out.push('<th>Description</th><th class="num">Qty</th><th class="num">Unit</th><th class="num">Amount</th>');
+      out.push('</tr></thead><tbody>');
+      (q.items || []).forEach(function (it) {
+        var amt = (Number(it.qty) || 0) * (Number(it.unit) || 0);
+        out.push('<tr><td>' + esc(it.desc) + '</td>' +
+          '<td class="num">' + (it.qty === '' ? '' : esc(it.qty)) + '</td>' +
+          '<td class="num">' + QS.money(it.unit) + '</td>' +
+          '<td class="num">' + QS.money(amt) + '</td></tr>');
+      });
+      out.push('</tbody></table></div>');
+    }
 
     out.push('<div class="p-totals">');
     out.push('<div><span>Subtotal</span><span>' + QS.money(t.sub) + '</span></div>');

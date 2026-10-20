@@ -178,6 +178,61 @@
     dom.tTax.textContent = QS.money(t.tax);
     dom.tTotal.textContent = QS.money(t.total);
     dom.tBalance.textContent = QS.money(t.balance);
+    if (dom.pPaint) dom.pPaint.textContent = QS.money(t.paint);
+    if (dom.pDecals) dom.pDecals.textContent = QS.money(t.decals);
+    if (dom.pDelivery) dom.pDelivery.textContent = QS.money(t.delivery);
+  }
+
+  /* ---------- pricing: paint tier, decals, delivery ---------- */
+
+  function renderPricing() {
+    var q = state.quote;
+    if (!q || !dom.tierRow) return;
+    var p = QS.fillPricing(q.pricing);
+
+    dom.tierRow.innerHTML = '';
+    QS.PAINT_TIERS.forEach(function (tier) {
+      var on = p.paintTier === tier.id;
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'tier' + (on ? ' on' : '');
+      b.setAttribute('data-tier', tier.id);
+      b.setAttribute('aria-pressed', on ? 'true' : 'false');
+      b.title = tier.hint;
+      var lab = document.createElement('span');
+      lab.className = 'tier-label';
+      lab.textContent = tier.label;
+      var price = document.createElement('span');
+      price.className = 'tier-price';
+      price.textContent = QS.money(tier.price);
+      b.appendChild(lab);
+      b.appendChild(price);
+      b.addEventListener('click', function () { setTier(tier.id); });
+      dom.tierRow.appendChild(b);
+    });
+
+    dom.decalCount.textContent = String(p.decals);
+    dom.decalWhere.value = p.decalWhere || '';
+    dom.delivery.checked = !!p.delivery;
+    dom.decalRate.textContent = QS.money(QS.DECAL_PRICE) + ' each';
+    dom.deliveryRate.textContent = QS.money(QS.DELIVERY_FEE);
+    renderTotals();
+  }
+
+  function setTier(id) {
+    if (!state.quote) return;
+    state.quote.pricing = QS.fillPricing(state.quote.pricing);
+    state.quote.pricing.paintTier = id;
+    renderPricing();
+    scheduleSave();
+  }
+
+  function setDecals(n) {
+    if (!state.quote) return;
+    state.quote.pricing = QS.fillPricing(state.quote.pricing);
+    state.quote.pricing.decals = Math.max(0, Math.round(n));
+    renderPricing();
+    scheduleSave();
   }
 
   /* ---------- list: working vs previous ---------- */
@@ -448,6 +503,7 @@
 
     QS.ui.buildSections(dom.sections, q, onFieldChange);
     renderWorkCard();
+    renderPricing();
     renderItems();
     renderPhotos();
     renderLog();
@@ -621,6 +677,15 @@
       savedNote: $('savedNote'),
       sections: $('sections'),
       itemRows: $('itemRows'),
+      tierRow: $('tierRow'),
+      decalCount: $('decalCount'),
+      decalWhere: $('decalWhere'),
+      decalRate: $('decalRate'),
+      deliveryRate: $('deliveryRate'),
+      delivery: $('delivery'),
+      pPaint: $('pPaint'),
+      pDecals: $('pDecals'),
+      pDelivery: $('pDelivery'),
       photoGrid: $('photoGrid'),
       photoDrop: $('photoDrop'),
       photoFile: $('photoFile'),
@@ -679,6 +744,25 @@
     dom.notes.addEventListener('input', function () {
       state.quote.notes = dom.notes.value;
       scheduleSave();
+    });
+
+    /* pricing */
+    dom.delivery.addEventListener('change', function () {
+      state.quote.pricing = QS.fillPricing(state.quote.pricing);
+      state.quote.pricing.delivery = dom.delivery.checked;
+      renderPricing();
+      scheduleSave();
+    });
+    dom.decalWhere.addEventListener('input', function () {
+      state.quote.pricing = QS.fillPricing(state.quote.pricing);
+      state.quote.pricing.decalWhere = dom.decalWhere.value;
+      scheduleSave();
+    });
+    $('btnDecalPlus').addEventListener('click', function () {
+      setDecals(QS.fillPricing(state.quote.pricing).decals + 1);
+    });
+    $('btnDecalMinus').addEventListener('click', function () {
+      setDecals(QS.fillPricing(state.quote.pricing).decals - 1);
     });
 
     /* navigation */

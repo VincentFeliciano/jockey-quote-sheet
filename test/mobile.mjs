@@ -147,6 +147,68 @@ await check('meta row is number, status, prepared by',
 await check('prepared by is Vincent', "document.getElementById('metaPreparedBy').value", 'Vincent Feliciano');
 await check('no silks section left', "/silks/i.test(document.getElementById('sections').innerText)", false);
 
+/* ---------- pricing: paint tier, decals, delivery ---------- */
+await check('paint job card exists', "!!document.getElementById('tierRow')", true);
+await check('three paint tiers', "document.querySelectorAll('#tierRow .tier').length", 3);
+await check('tier names and prices', "(function(){var t=[];document.querySelectorAll('#tierRow .tier').forEach(function(b){t.push(b.querySelector('.tier-label').textContent+'='+b.querySelector('.tier-price').textContent);});return t.join('|');})()",
+  'Simple=$150.00|Standard=$175.00|Complex=$200.00');
+await check('standard selected by default', "document.querySelector('#tierRow .tier.on .tier-label').textContent", 'Standard');
+await check('decal count starts at zero', "document.getElementById('decalCount').textContent", '0');
+await check('decal rate shown', "document.getElementById('decalRate').textContent", '$10.00 each');
+await check('delivery rate shown', "document.getElementById('deliveryRate').textContent", '$50.00');
+await check('delivery off by default', "document.getElementById('delivery').checked", false);
+await check('paint line shows the tier price', "document.getElementById('pPaint').textContent", '$175.00');
+
+/* pick the complex tier */
+await evalJs(`document.querySelector('#tierRow .tier[data-tier="complex"]').click()`);
+await sleep(300);
+await check('complex tier selects', "document.querySelector('#tierRow .tier.on .tier-label').textContent", 'Complex');
+await check('paint line follows the tier', "document.getElementById('pPaint').textContent", '$200.00');
+await check('total follows the tier', "document.getElementById('tTotal').textContent", '$200.00');
+
+/* two decals at ten each */
+await evalJs(`document.getElementById('btnDecalPlus').click()`);
+await sleep(200);
+await evalJs(`document.getElementById('btnDecalPlus').click()`);
+await sleep(300);
+await check('decal stepper counts up', "document.getElementById('decalCount').textContent", '2');
+await check('decals priced at ten each', "document.getElementById('pDecals').textContent", '$20.00');
+await check('total includes decals', "document.getElementById('tTotal').textContent", '$220.00');
+
+/* minus goes back down and never below zero */
+await evalJs(`document.getElementById('btnDecalMinus').click()`);
+await sleep(250);
+await check('decal stepper counts down', "document.getElementById('decalCount').textContent", '1');
+await evalJs(`document.getElementById('btnDecalMinus').click()`);
+await sleep(150);
+await evalJs(`document.getElementById('btnDecalMinus').click()`);
+await sleep(250);
+await check('decals never go negative', "document.getElementById('decalCount').textContent", '0');
+
+/* delivery */
+await evalJs(`document.getElementById('delivery').click()`);
+await sleep(300);
+await check('delivery switches on', "document.getElementById('delivery').checked", true);
+await check('delivery line shows the fee', "document.getElementById('pDelivery').textContent", '$50.00');
+await check('total includes delivery', "document.getElementById('tTotal').textContent", '$250.00');
+
+/* the whole thing survives a reload, since it is saved to the store */
+await sleep(900);
+await check('pricing persisted', 
+  "(async function(){var qs=await QS.store.listQuotes();return qs[0].pricing.paintTier+'/'+qs[0].pricing.decals+'/'+qs[0].pricing.delivery;})()",
+  'complex/0/true');
+
+/* extras are opt-in now, not pre-filled */
+await check('extras start empty', "document.querySelectorAll('#itemRows tr').length", 0);
+await check('extras card is labelled', "(function(){var h=document.querySelectorAll('.card h2');for(var i=0;i<h.length;i++){if(/^Extras/.test(h[i].textContent.trim()))return true;}return false;})()", true);
+
+/* the corner mark */
+await check('plymr mark in the header', "!!document.querySelector('.brand img.plymr')", true);
+await check('plymr mark loads', "(function(){var i=document.querySelector('.brand img.plymr');return i.complete && i.naturalWidth>0;})()", true);
+await check('plymr mark is yellow on transparent', 
+  "(function(){var c=document.createElement('canvas');var i=document.querySelector('.brand img.plymr');c.width=i.naturalWidth;c.height=i.naturalHeight;var x=c.getContext('2d');x.drawImage(i,0,0);var d=x.getImageData(0,0,c.width,c.height).data;var y=0,clear=0;for(var p=0;p<d.length;p+=4){if(d[p+3]<8){clear++;}else if(d[p]>200&&d[p+1]>160&&d[p+2]<90){y++;}}return y>500 && clear>500;})()",
+  true);
+
 /* ---------- fill a quote ---------- */
 await evalJs(setField('Name', 'Vince Test'));
 await evalJs(setField('Business / owner', 'Crafters Gallery'));
@@ -271,6 +333,12 @@ await evalJs(`document.querySelector('#sections .card:nth-child(3)').scrollIntoV
 await sleep(600);
 const shotSpec = await send('Page.captureScreenshot', { format: 'png' });
 writeFileSync(resolve('test/mobile-spec.png'), Buffer.from(shotSpec.data, 'base64'));
+
+/* the pricing card, scrolled to the top of the sheet */
+await evalJs(`(function(){var c=document.querySelector('#tierRow').closest('.card'); c.scrollIntoView({block:'start'}); return true;})()`);
+await sleep(600);
+const shotPrice = await send('Page.captureScreenshot', { format: 'png' });
+writeFileSync(resolve('test/mobile-pricing.png'), Buffer.from(shotPrice.data, 'base64'));
 
 await evalJs(`document.getElementById('btnBack').click()`);
 await sleep(700);

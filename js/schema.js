@@ -94,6 +94,66 @@ QS.PAINT_DEFAULTS = {
 
 QS.PREPARED_BY = 'Vincent Feliciano';
 
+/* ---------- pricing ----------
+
+   The paint job is the only thing whose price really moves: the more
+   detail in the paint, the more it costs. Decals are flat-rate each,
+   wherever they land, and delivery is a flat fee. */
+
+QS.PAINT_TIERS = [
+  { id: 'simple',   label: 'Simple',   price: 150, hint: 'One or two colours, clean lines' },
+  { id: 'standard', label: 'Standard', price: 175, hint: 'Several colours, some detail' },
+  { id: 'complex',  label: 'Complex',  price: 200, hint: 'Full colour work and fine detail' }
+];
+
+QS.DECAL_PRICE = 10;    /* each, front, back or bottom */
+QS.DELIVERY_FEE = 50;
+
+QS.PRICING_DEFAULTS = {
+  paintTier: 'standard',
+  decals: 0,
+  decalWhere: '',
+  delivery: false
+};
+
+QS.paintTier = function (id) {
+  for (var i = 0; i < QS.PAINT_TIERS.length; i++) {
+    if (QS.PAINT_TIERS[i].id === id) return QS.PAINT_TIERS[i];
+  }
+  return null;
+};
+
+/* Records made before pricing existed get the standard tier, no decals,
+   no delivery — the same shape every time. */
+QS.fillPricing = function (src) {
+  var out = JSON.parse(JSON.stringify(QS.PRICING_DEFAULTS));
+  src = src || {};
+  if (src.paintTier !== undefined && QS.paintTier(src.paintTier)) out.paintTier = src.paintTier;
+  if (src.paintTier === '') out.paintTier = '';
+  if (src.decals !== undefined && src.decals !== null) out.decals = Math.max(0, Number(src.decals) || 0);
+  if (src.decalWhere !== undefined && src.decalWhere !== null) out.decalWhere = src.decalWhere;
+  if (src.delivery !== undefined && src.delivery !== null) out.delivery = !!src.delivery;
+  return out;
+};
+
+/* The money the pricing block contributes, separate from the free-form
+   extras so each can be shown on its own line. */
+QS.charges = function (q) {
+  var p = QS.fillPricing((q && q.pricing) || null);
+  var tier = QS.paintTier(p.paintTier);
+  var paint = tier ? tier.price : 0;
+  var decals = p.decals * QS.DECAL_PRICE;
+  var delivery = p.delivery ? QS.DELIVERY_FEE : 0;
+  return {
+    paint: paint,
+    paintLabel: tier ? tier.label : '',
+    decals: decals,
+    decalCount: p.decals,
+    delivery: delivery,
+    total: paint + decals + delivery
+  };
+};
+
 /* Deep-fill a paint block so records made before the statue spec existed
    come back with every field present. */
 QS.fillPaint = function (src) {
@@ -121,10 +181,8 @@ QS.STAGES = [
   { id: 'done',       label: 'Complete',      hint: 'Out the door' }
 ];
 
-QS.DEFAULT_ITEMS = [
-  { desc: 'Stocky the Jockey — painted statue', qty: 1, unit: 0 },
-  { desc: 'Shipping', qty: 1, unit: 0 }
-];
+QS.DEFAULT_ITEMS = [];   /* extras are opt-in now: paint, decals and delivery
+                            are priced by the pricing block, not by line items */
 
 QS.STATUSES = ['draft', 'sent', 'accepted', 'declined', 'invoiced', 'paid'];
 
@@ -161,7 +219,8 @@ QS.newQuote = function (number) {
     customer: { name: '', company: '', email: '', phone: '', address: '' },
     job: { jockey: '', size: '', due: '', rush: false },
     paint: QS.fillPaint(null),
-    items: QS.DEFAULT_ITEMS.map(function (i) { return { desc: i.desc, qty: i.qty, unit: i.unit }; }),
+    pricing: QS.fillPricing(null),
+    items: [],
     discount: 0,
     taxRate: 0,
     deposit: 0,
@@ -208,10 +267,12 @@ QS.money = function (n) {
 };
 
 QS.totals = function (q) {
-  var sub = 0;
+  var extras = 0;
   (q.items || []).forEach(function (it) {
-    sub += (Number(it.qty) || 0) * (Number(it.unit) || 0);
+    extras += (Number(it.qty) || 0) * (Number(it.unit) || 0);
   });
+  var ch = QS.charges(q);
+  var sub = extras + ch.total;
   var disc = Number(q.discount) || 0;
   var base = sub - disc;
   if (base < 0) base = 0;
@@ -219,6 +280,12 @@ QS.totals = function (q) {
   var total = base + tax;
   var dep = Number(q.deposit) || 0;
   return {
+    extras: extras,
+    paint: ch.paint,
+    paintLabel: ch.paintLabel,
+    decals: ch.decals,
+    decalCount: ch.decalCount,
+    delivery: ch.delivery,
     sub: sub,
     disc: disc,
     tax: tax,
@@ -239,6 +306,7 @@ QS.ensureShape = function (q) {
   if (q.completedAt === undefined) q.completedAt = '';
   if (!q.stage) q.stage = q.completedAt ? 'done' : 'quote';
   q.paint = QS.fillPaint(q.paint);
+  q.pricing = QS.fillPricing(q.pricing);
   if (!q.preparedBy) q.preparedBy = QS.PREPARED_BY;
   delete q.silks;
   delete q.validUntil;
