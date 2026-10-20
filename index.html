@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#000000">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Quote Sheet">
+<meta name="description" content="Jockey quote sheet — quotes, work in progress and photos, on your phone.">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="css/style.css">
+<title>Jockey Quote Sheet</title>
+</head>
+<body class="view-list">
+
+<!-- ================= LIST SCREEN ================= -->
+<section id="screenList" class="screen screen-list">
+  <header class="bar">
+    <div class="brand">
+      <span class="logo">&#9670;</span>
+      <strong>Quote Sheet</strong>
+    </div>
+    <button id="btnNew" class="btn primary" type="button">+ New</button>
+  </header>
+
+  <div class="scroller" id="listScroll">
+    <div class="pad">
+      <input id="search" class="search" type="search" placeholder="Search name, jockey, number&hellip;" autocomplete="off">
+
+      <div class="side-group work-group">
+        <div class="side-head">
+          <span>Working</span>
+          <span id="workCount" class="count">0</span>
+        </div>
+        <ul id="workList" class="qlist work"></ul>
+      </div>
+
+      <div class="side-group prev-group">
+        <button id="prevToggle" class="side-head toggle" type="button" aria-expanded="true">
+          <span>Previous</span>
+          <span id="prevCount" class="count">0</span>
+          <span class="caret">&#9662;</span>
+        </button>
+        <ul id="prevList" class="qlist prev"></ul>
+      </div>
+
+      <div class="list-tools">
+        <button id="btnExport" class="btn small" type="button">Backup file</button>
+        <button id="btnImport" class="btn small" type="button">Restore</button>
+        <input type="file" id="importFile" accept="application/json,.json" hidden>
+      </div>
+
+      <div class="list-foot"><span id="savedNote">Ready</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= DETAIL SCREEN ================= -->
+<section id="screenDetail" class="screen screen-detail">
+  <header class="bar detail-bar">
+    <button id="btnBack" class="btn icon" type="button" aria-label="Back to list">&#8592;</button>
+    <div class="detail-title">
+      <strong id="dTitle">Quote</strong>
+      <span id="quoteNo" class="qno">new</span>
+    </div>
+    <button id="btnSave" class="btn primary" type="button">Save</button>
+  </header>
+
+  <div class="scroller" id="sheet">
+    <div class="pad">
+
+      <div class="doc-head">
+        <div class="meta-row">
+          <label>Number <input id="metaNumber" type="text" readonly></label>
+          <label>Date <input id="metaDate" type="date"></label>
+          <label>Valid until <input id="metaValid" type="date"></label>
+        </div>
+        <div class="meta-row">
+          <label>Status
+            <select id="status" class="status-select">
+              <option value="draft">Draft</option>
+              <option value="sent">Sent</option>
+              <option value="accepted">Accepted</option>
+              <option value="declined">Declined</option>
+              <option value="invoiced">Invoiced</option>
+              <option value="paid">Paid</option>
+            </select>
+          </label>
+          <label>Prepared by <input id="metaPreparedBy" type="text" placeholder="Your name"></label>
+        </div>
+      </div>
+
+      <section id="workCard" class="card work-card">
+        <div class="work-head">
+          <h2>Work &amp; progress</h2>
+        </div>
+        <div class="work-actions">
+          <button id="btnPin" class="btn small" type="button">Pin to top</button>
+          <button id="btnComplete" class="btn small" type="button">Mark complete</button>
+        </div>
+
+        <div id="doneBanner" class="done-banner" hidden>
+          <span id="doneText">Complete</span>
+        </div>
+
+        <div id="stageSteps" class="steps" role="group" aria-label="Stage"></div>
+
+        <div class="prog">
+          <div class="prog-bar"><i id="progFill"></i></div>
+          <span id="progText" class="prog-text">No steps yet</span>
+        </div>
+
+        <div class="task-add">
+          <input id="taskInput" type="text" placeholder="Add a step &mdash; cut fabric, embroidery&hellip;">
+          <button id="btnAddTask" class="btn small" type="button">Add</button>
+        </div>
+        <ul id="taskList" class="tasks"></ul>
+      </section>
+
+      <div id="sections"></div>
+
+      <section class="card">
+        <h2>Photos <span class="hint">camera, or anything saved from a text or email</span></h2>
+        <div class="photo-buttons">
+          <button id="btnCamera" class="btn photo-btn" type="button">
+            <span class="pico">&#128247;</span> Take photo
+          </button>
+          <button id="btnLibrary" class="btn photo-btn" type="button">
+            <span class="pico">&#128444;</span> Choose photos
+          </button>
+        </div>
+        <input id="photoCamera" type="file" accept="image/*" capture="environment" hidden>
+        <input id="photoFile" type="file" accept="image/*" multiple hidden>
+        <div id="photoDrop" class="photo-drop">
+          <p>Drop images here (desktop)</p>
+        </div>
+        <div id="photoGrid" class="photo-grid"></div>
+      </section>
+
+      <section class="card">
+        <h2>Line items</h2>
+        <table class="items">
+          <thead>
+            <tr>
+              <th>Description</th>
+              <th class="num">Qty</th>
+              <th class="num">Unit</th>
+              <th class="num">Amount</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="itemRows"></tbody>
+        </table>
+        <button id="btnAddItem" class="btn small" type="button">+ Add line</button>
+      </section>
+
+      <section class="card">
+        <h2>Totals</h2>
+        <label class="trow">Subtotal <output id="tSub">$0.00</output></label>
+        <label class="trow">Discount <input id="discount" type="number" step="0.01" inputmode="decimal" value="0"></label>
+        <label class="trow">Tax % <input id="taxRate" type="number" step="0.001" inputmode="decimal" value="0"></label>
+        <label class="trow">Tax <output id="tTax">$0.00</output></label>
+        <div class="trow grand">Total <output id="tTotal">$0.00</output></div>
+        <label class="trow">Deposit <input id="deposit" type="number" step="0.01" inputmode="decimal" value="0"></label>
+        <div class="trow balance">Balance <output id="tBalance">$0.00</output></div>
+      </section>
+
+      <section class="card">
+        <h2>Notes</h2>
+        <textarea id="notes" rows="4" placeholder="Anything the shop needs to know&hellip;"></textarea>
+        <h3>Follow-up log</h3>
+        <div class="log-add">
+          <input id="logInput" type="text" placeholder="Called about the deposit&hellip;">
+          <button id="btnAddLog" class="btn small" type="button">Add</button>
+        </div>
+        <ul id="logList" class="log"></ul>
+      </section>
+
+      <section class="card card-tools">
+        <h2>Sheet</h2>
+        <div class="list-tools">
+          <button id="btnPrint" class="btn small" type="button">Print / PDF</button>
+          <button id="btnExport2" class="btn small" type="button">Backup file</button>
+          <button id="btnImport2" class="btn small" type="button">Restore</button>
+        </div>
+        <p class="fine">Saved on this phone as you type. Take a backup before clearing your browser data.</p>
+      </section>
+
+      <div class="bottom-space"></div>
+    </div>
+  </div>
+</section>
+
+<div id="printSheet" class="print-only"></div>
+
+<script src="js/schema.js"></script>
+<script src="js/store.js"></script>
+<script src="js/photos.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/print.js"></script>
+<script src="js/app.js"></script>
+<script>
+/* Offline shell — only over http(s), never from file:// */
+if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('sw.js').catch(function () { /* offline cache is optional */ });
+  });
+}
+</script>
+</body>
+</html>
