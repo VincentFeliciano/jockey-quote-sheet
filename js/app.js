@@ -684,6 +684,21 @@
     $('btnPull').addEventListener('click', pullNow);
     $('btnSyncSave').addEventListener('click', saveSyncSettings);
     $('btnSyncPull').addEventListener('click', pullNow);
+    if ($('btnSyncPaste')) {
+      $('btnSyncPaste').addEventListener('click', async function () {
+        var t = $('syncToken');
+        try {
+          var txt = await navigator.clipboard.readText();
+          if (!txt || !txt.trim()) return note('Clipboard is empty');
+          t.value = txt.trim();
+          saveSyncSettings();
+          if (QS.sync.isConfigured()) pullNow();
+        } catch (e) {
+          note('Long-press the token box and paste');
+          try { t.focus(); } catch (e2) {}
+        }
+      });
+    }
     $('btnSyncForget').addEventListener('click', function () {
       QS.sync.saveCfg({ token: '' });
       fillSyncFields();
@@ -820,6 +835,21 @@
           });
           note('Repo linked');
         } catch (e) { /* storage blocked */ }
+      }
+      try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {}
+    }
+
+    /* setup link: #setup opens the repo panel with the token box ready */
+    if (/#setup\b/.test(location.hash || '')) {
+      setView('list');
+      renderList();
+      var sbox = $('syncBox');
+      if (sbox) {
+        sbox.open = true;
+        try { sbox.scrollIntoView({ block: 'center' }); } catch (e) {}
+        var tin = $('syncToken');
+        if (tin) setTimeout(function () { try { tin.focus(); } catch (e) {} }, 200);
+        note('Paste the token, then Save settings');
       }
       try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {}
     }
