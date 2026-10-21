@@ -450,51 +450,48 @@ input[type="color"] { min-height: 42px; padding: 3px; width: 56px; flex: 0 0 56p
 }
 .lightbox img { max-width: 100%; max-height: 100%; }
 
-/* ---------- line items ---------- */
+/* ---------- save confirmation ---------- */
 
-.items { width: 100%; border-collapse: collapse; }
-.items thead { display: none; }
-.items tr {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr 34px;
-  gap: 6px;
-  padding: 10px 0;
-  border-top: 1px solid var(--line);
+.modal {
+  display: none;
+  position: fixed; inset: 0; z-index: 60;
+  background: rgba(0,0,0,.78);
+  align-items: center; justify-content: center;
+  padding: 24px;
+  -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px);
 }
-.items tr:first-child { border-top: 0; }
-.items td { padding: 0; }
-.items td:nth-child(1) { grid-column: 1 / -1; }
-.items td input { width: 100%; }
-.items td.num::before {
-  display: block;
-  font-size: 9px; letter-spacing: .12em; text-transform: uppercase;
-  color: var(--dim); margin-bottom: 3px;
-}
-.items td:nth-child(2)::before { content: "Qty"; }
-.items td:nth-child(3)::before { content: "Unit"; }
-.items td:nth-child(4)::before { content: "Amount"; }
-.items td.amt {
-  font-size: 13px; color: var(--yellow);
-  display: flex; align-items: flex-end; padding-bottom: 10px;
-  font-family: ui-monospace, Consolas, monospace;
-}
-.items td:last-child { display: flex; align-items: flex-end; }
+.modal.on { display: flex; animation: fade-in .12s ease-out; }
 
-@media (min-width: 900px) {
-  .items thead { display: table-header-group; }
-  .items thead th {
-    text-align: left; font-size: 10px; letter-spacing: .12em;
-    text-transform: uppercase; color: var(--muted);
-    padding: 0 6px 6px; border-bottom: 1px solid var(--line);
-  }
-  .items thead th.num { text-align: right; }
-  .items tr { display: table-row; border: 0; }
-  .items td { display: table-cell; padding: 4px; }
-  .items td.num::before, .items td:nth-child(2)::before,
-  .items td:nth-child(3)::before, .items td:nth-child(4)::before { content: none; }
-  .items td.amt { text-align: right; display: table-cell; padding-bottom: 4px; }
+.modal-card {
+  width: 100%; max-width: 300px;
+  background: var(--s2);
+  border: 1px solid var(--line2);
+  border-radius: 10px;
+  padding: 26px 20px 18px;
+  text-align: center;
+  box-shadow: 0 18px 50px rgba(0,0,0,.7);
 }
+.modal-card .tick {
+  width: 52px; height: 52px; margin: 0 auto 14px;
+  display: flex; align-items: center; justify-content: center;
+  border: 2px solid var(--yellow); border-radius: 50%;
+  color: var(--yellow); font-size: 27px; line-height: 1;
+  background: var(--yellow-soft);
+}
+.modal-card h2 {
+  margin: 0 0 6px; font-size: 17px; font-weight: 700;
+  letter-spacing: .01em; color: var(--ink);
+}
+.modal-card p {
+  margin: 0 0 18px; font-size: 13px; color: var(--ink2);
+  word-break: break-word;
+}
+.modal-card .btn { width: 100%; }
 
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: none; }
+}
 /* ---------- totals ---------- */
 
 .trow {

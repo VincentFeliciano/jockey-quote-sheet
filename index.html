@@ -169,23 +169,6 @@
       </section>
 
       <section class="card">
-        <h2>Extras <span class="hint">anything else you charge for</span></h2>
-        <table class="items">
-          <thead>
-            <tr>
-              <th>Description</th>
-              <th class="num">Qty</th>
-              <th class="num">Unit</th>
-              <th class="num">Amount</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody id="itemRows"></tbody>
-        </table>
-        <button id="btnAddItem" class="btn small" type="button">+ Add line</button>
-      </section>
-
-      <section class="card">
         <h2>Totals</h2>
         <label class="trow">Subtotal <output id="tSub">$0.00</output></label>
         <label class="trow">Discount <input id="discount" type="number" step="0.01" inputmode="decimal" value="0"></label>
@@ -263,6 +246,15 @@
     </div>
   </div>
 </section>
+
+<div id="saveModal" class="modal" hidden>
+  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="saveModalTitle">
+    <div class="tick" aria-hidden="true">&#10003;</div>
+    <h2 id="saveModalTitle">Saved</h2>
+    <p id="saveModalNote">On this phone and in the repo.</p>
+    <button id="btnSaveDone" class="btn primary" type="button">Done</button>
+  </div>
+</div>
 
 <div id="printSheet" class="print-only"></div>
 

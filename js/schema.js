@@ -4,24 +4,12 @@ window.QS = window.QS || {};
 
 QS.SECTIONS = [
   {
-    id: 'customer',
-    title: 'Customer',
-    fields: [
-      { k: 'customer.name',    label: 'Name',          type: 'text',  wide: false },
-      { k: 'customer.company', label: 'Business / owner', type: 'text', wide: false },
-      { k: 'customer.email',   label: 'Email',         type: 'email', wide: false },
-      { k: 'customer.phone',   label: 'Phone',         type: 'tel',   wide: false },
-      { k: 'customer.address', label: 'Address',       type: 'textarea', rows: 2, wide: true }
-    ]
-  },
-  {
     id: 'job',
     title: 'The piece',
     fields: [
-      { k: 'job.jockey',  label: 'Piece',     type: 'text', placeholder: 'Stocky the Jockey — 3 ft' },
-      { k: 'job.size',    label: 'Size',      type: 'text', placeholder: '3 ft / 40 in' },
-      { k: 'job.due',     label: 'Due date',  type: 'date' },
-      { k: 'job.rush',    label: 'Rush job',  type: 'checkbox' }
+      { k: 'job.jockey',  label: 'Jockey name', type: 'text', placeholder: 'Stocky the Jockey', wide: true },
+      { k: 'job.due',     label: 'Due date',    type: 'date' },
+      { k: 'job.rush',    label: 'Rush job',    type: 'checkbox' }
     ]
   },
   {
@@ -136,8 +124,7 @@ QS.fillPricing = function (src) {
   return out;
 };
 
-/* The money the pricing block contributes, separate from the free-form
-   extras so each can be shown on its own line. */
+/* The money the pricing block contributes — paint job, decals, delivery. */
 QS.charges = function (q) {
   var p = QS.fillPricing((q && q.pricing) || null);
   var tier = QS.paintTier(p.paintTier);
@@ -216,11 +203,9 @@ QS.newQuote = function (number) {
     pinned: false,
     stage: 'quote',
     completedAt: '',
-    customer: { name: '', company: '', email: '', phone: '', address: '' },
-    job: { jockey: '', size: '', due: '', rush: false },
+    job: { jockey: '', due: '', rush: false },
     paint: QS.fillPaint(null),
     pricing: QS.fillPricing(null),
-    items: [],
     discount: 0,
     taxRate: 0,
     deposit: 0,
@@ -267,12 +252,8 @@ QS.money = function (n) {
 };
 
 QS.totals = function (q) {
-  var extras = 0;
-  (q.items || []).forEach(function (it) {
-    extras += (Number(it.qty) || 0) * (Number(it.unit) || 0);
-  });
   var ch = QS.charges(q);
-  var sub = extras + ch.total;
+  var sub = ch.total;
   var disc = Number(q.discount) || 0;
   var base = sub - disc;
   if (base < 0) base = 0;
@@ -280,7 +261,6 @@ QS.totals = function (q) {
   var total = base + tax;
   var dep = Number(q.deposit) || 0;
   return {
-    extras: extras,
     paint: ch.paint,
     paintLabel: ch.paintLabel,
     decals: ch.decals,
@@ -310,6 +290,9 @@ QS.ensureShape = function (q) {
   if (!q.preparedBy) q.preparedBy = QS.PREPARED_BY;
   delete q.silks;
   delete q.validUntil;
+  delete q.customer;   /* no customer details — this is the shop's own sheet */
+  delete q.items;      /* extras are gone: paint, decals and delivery only */
+  if (q.job) delete q.job.size;
   return q;
 };
 

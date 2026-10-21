@@ -32,7 +32,6 @@ QS.printDoc = (function () {
 
   function build(q, photos) {
     var t = QS.totals(q);
-    var c = q.customer || {};
     var j = q.job || {};
     var p = QS.fillPaint(q.paint);
     var out = [];
@@ -46,32 +45,16 @@ QS.printDoc = (function () {
     if (q.preparedBy) out.push('<div>Prepared by ' + esc(q.preparedBy) + '</div>');
     out.push('</div></div>');
 
-    /* customer / job */
-    var hasCustomer = c.name || c.company || c.address || c.email || c.phone;
-    var hasJob = j.jockey || j.size || j.due || j.rush;
+    /* the piece */
+    var hasJob = j.jockey || j.due || j.rush;
 
-    if (hasCustomer || hasJob) {
+    if (hasJob) {
       out.push('<div class="p-cols">');
-
-      if (hasCustomer) {
-        out.push('<div class="p-col"><h2>Prepared for</h2><p>');
-        if (c.name) out.push('<b>' + esc(c.name) + '</b><br>');
-        if (c.company) out.push(esc(c.company) + '<br>');
-        if (c.address) out.push(nl2br(c.address) + '<br>');
-        if (c.email) out.push(esc(c.email) + '<br>');
-        if (c.phone) out.push(esc(c.phone));
-        out.push('</p></div>');
-      }
-
-      if (hasJob) {
-        out.push('<div class="p-col"><h2>Job</h2><p>');
-        if (j.jockey) out.push('Piece: <b>' + esc(j.jockey) + '</b><br>');
-        if (j.size) out.push('Size: ' + esc(j.size) + '<br>');
-        if (j.due) out.push('Due: <b>' + esc(j.due) + '</b><br>');
-        if (j.rush) out.push('<b>RUSH JOB</b>');
-        out.push('</p></div>');
-      }
-
+      out.push('<div class="p-col"><h2>The piece</h2><p>');
+      if (j.jockey) out.push('Jockey: <b>' + esc(j.jockey) + '</b><br>');
+      if (j.due) out.push('Due: <b>' + esc(j.due) + '</b><br>');
+      if (j.rush) out.push('<b>RUSH JOB</b>');
+      out.push('</p></div>');
       out.push('</div>');
     }
 
@@ -133,22 +116,6 @@ QS.printDoc = (function () {
     out.push('<tr><td>Delivery</td><td class="num">' +
       (t.delivery ? QS.money(t.delivery) : '&mdash;') + '</td></tr>');
     out.push('</tbody></table></div>');
-
-    /* extras */
-    if ((q.items || []).length) {
-      out.push('<div class="p-sec"><h2>Extras</h2>');
-      out.push('<table class="p-items"><thead><tr>');
-      out.push('<th>Description</th><th class="num">Qty</th><th class="num">Unit</th><th class="num">Amount</th>');
-      out.push('</tr></thead><tbody>');
-      (q.items || []).forEach(function (it) {
-        var amt = (Number(it.qty) || 0) * (Number(it.unit) || 0);
-        out.push('<tr><td>' + esc(it.desc) + '</td>' +
-          '<td class="num">' + (it.qty === '' ? '' : esc(it.qty)) + '</td>' +
-          '<td class="num">' + QS.money(it.unit) + '</td>' +
-          '<td class="num">' + QS.money(amt) + '</td></tr>');
-      });
-      out.push('</tbody></table></div>');
-    }
 
     out.push('<div class="p-totals">');
     out.push('<div><span>Subtotal</span><span>' + QS.money(t.sub) + '</span></div>');

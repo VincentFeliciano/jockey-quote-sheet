@@ -18,6 +18,7 @@ function ok(name, cond, extra) {
   else { fail++; console.log('  FAIL ' + name + (extra ? '  -> ' + extra : '')); }
 }
 
+/* ---------- pricing constants ---------- */
 ok('three paint tiers', Q.PAINT_TIERS.length === 3);
 ok('simple is 150', Q.paintTier('simple').price === 150);
 ok('standard is 175', Q.paintTier('standard').price === 175);
@@ -25,11 +26,29 @@ ok('complex is 200', Q.paintTier('complex').price === 200);
 ok('decal is 10', Q.DECAL_PRICE === 10);
 ok('delivery is 50', Q.DELIVERY_FEE === 50);
 
+/* ---------- the sheet's shape: piece only, no customer, no extras ---------- */
+const first = Q.SECTIONS[0];
+ok('sheet starts with the piece', first.id === 'job' && first.title === 'The piece');
+ok('piece has jockey, due, rush',
+  first.fields.map(f => f.k).join(',') === 'job.jockey,job.due,job.rush',
+  first.fields.map(f => f.k).join(','));
+ok('jockey field is labelled "Jockey name"',
+  first.fields[0].label === 'Jockey name', first.fields[0].label);
+ok('no size field anywhere',
+  Q.SECTIONS.every(s => s.fields.every(f => f.k.indexOf('size') === -1)));
+ok('no customer section', Q.SECTIONS.every(s => s.id !== 'customer'));
+
 const q = Q.newQuote('JQ-2026-001');
 ok('new quote has pricing', !!q.pricing);
 ok('new quote defaults to standard', q.pricing.paintTier === 'standard');
-ok('new quote has no extras', q.items.length === 0);
+ok('new quote has no extras list', q.items === undefined);
+ok('new quote has no customer block', q.customer === undefined);
+ok('new quote job is jockey/due/rush',
+  Object.keys(q.job).sort().join(',') === 'due,jockey,rush',
+  Object.keys(q.job).sort().join(','));
+ok('new quote due date starts blank', q.job.due === '', JSON.stringify(q.job.due));
 
+/* ---------- totals ---------- */
 let t = Q.totals(q);
 ok('standard alone totals 175', t.total === 175, 'got ' + t.total);
 
@@ -46,20 +65,26 @@ q.pricing.decals = 2;
 t = Q.totals(q);
 ok('complex+2 decals+delivery = 270', t.total === 270, 'got ' + t.total);
 
-q.items.push({ desc: 'Rush', qty: 1, unit: 25 });
-t = Q.totals(q);
-ok('extras add on top = 295', t.total === 295, 'got ' + t.total);
-ok('extras reported separately', t.extras === 25, 'got ' + t.extras);
-
 q.discount = 45;
 t = Q.totals(q);
-ok('discount off the total = 250', t.total === 250, 'got ' + t.total);
+ok('discount off the total = 225', t.total === 225, 'got ' + t.total);
 
-const old = Q.ensureShape({ id: 'x', items: [{ desc: 'a', qty: 1, unit: 10 }] });
+/* ---------- old records: extras are stripped, not counted ---------- */
+const old = Q.ensureShape({
+  id: 'x',
+  items: [{ desc: 'a', qty: 1, unit: 10 }],
+  customer: { name: 'Someone', company: 'Somewhere' },
+  job: { jockey: 'Stocky', due: '2026-11-01', rush: false, size: 'M' }
+});
 ok('old record gains pricing', !!old.pricing);
 ok('old record defaults to standard', old.pricing.paintTier === 'standard');
-ok('old record totals 185', Q.totals(old).total === 185, 'got ' + Q.totals(old).total);
+ok('old record loses its extras list', old.items === undefined);
+ok('old record loses its customer block', old.customer === undefined);
+ok('old record loses job.size', old.job.size === undefined);
+ok('old record keeps the jockey', old.job.jockey === 'Stocky', old.job.jockey);
+ok('old record totals 175', Q.totals(old).total === 175, 'got ' + Q.totals(old).total);
 
+/* ---------- guards ---------- */
 ok('decals floor at zero', Q.fillPricing({ decals: -5 }).decals === 0);
 
 console.log('\n' + pass + ' passed, ' + fail + ' failed');

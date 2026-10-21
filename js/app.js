@@ -124,11 +124,34 @@
     note(QS.sync.isConfigured() ? 'Repo linked' : 'No token yet');
   }
 
+  /* ---------- save confirmation ---------- */
+
+  function showSaved(msg) {
+    var m = $('saveModal');
+    if (!m) return;
+    var line = $('saveModalNote');
+    if (line) line.textContent = msg;
+    m.hidden = false;
+    m.classList.add('on');
+    var done = $('btnSaveDone');
+    if (done) setTimeout(function () { try { done.focus(); } catch (e) {} }, 30);
+  }
+
+  function hideSaved() {
+    var m = $('saveModal');
+    if (!m) return;
+    m.classList.remove('on');
+    m.hidden = true;
+    setView('list');
+    renderList();
+  }
+
   async function pushNow() {
     await saveNow();
     if (!QS.sync.isConfigured()) {
       note('Saved on phone — no repo token yet');
       renderSyncState();
+      showSaved('On this phone. No repo token yet.');
       return;
     }
     try {
@@ -138,9 +161,11 @@
       renderList();
       renderSyncState();
       note('Saved to repo' + (r.uploaded ? ' + ' + r.uploaded + ' photo(s)' : ''));
+      showSaved('In the repo' + (r.uploaded ? ', with ' + r.uploaded + ' photo(s)' : '') + '.');
     } catch (e) {
       renderSyncState(e.message);
       note('On phone only — push failed', true);
+      showSaved('On this phone only — the repo push failed.');
     }
   }
 
@@ -240,8 +265,7 @@
   function matches(x, needle) {
     if (!needle) return true;
     var hay = [
-      x.number, (x.customer || {}).name, (x.customer || {}).company,
-      (x.job || {}).jockey, (x.notes || '')
+      x.number, (x.job || {}).jockey, (x.notes || '')
     ].join(' ').toLowerCase();
     return hay.indexOf(needle) !== -1;
   }
@@ -286,7 +310,7 @@
     var stats = QS.taskStats(x);
 
     var row1 = el('div', { class: 'row1' });
-    row1.appendChild(el('span', { class: 'nm', text: (x.customer || {}).name || '(no name)' }));
+    row1.appendChild(el('span', { class: 'nm', text: (x.job || {}).jockey || '(no jockey)' }));
     row1.appendChild(el('span', { class: 'chip ' + (x.status || 'draft'), text: x.status || 'draft' }));
 
     var row2 = el('div', { class: 'row2' });
@@ -475,8 +499,7 @@
   function syncTitle() {
     var q = state.quote;
     if (!q) return;
-    var c = q.customer || {};
-    dom.dTitle.textContent = c.name || c.company || (q.job || {}).jockey || 'Quote';
+    dom.dTitle.textContent = (q.job || {}).jockey || 'Quote';
     dom.quoteNo.textContent = q.number || 'new';
   }
 
@@ -504,7 +527,6 @@
     QS.ui.buildSections(dom.sections, q, onFieldChange);
     renderWorkCard();
     renderPricing();
-    renderItems();
     renderPhotos();
     renderLog();
     renderTotals();
@@ -514,22 +536,8 @@
 
   function onFieldChange(path, value) {
     QS.setPath(state.quote, path, value);
-    if (path.indexOf('customer') === 0) syncTitle();
+    if (path.indexOf('job') === 0) syncTitle();
     scheduleSave();
-  }
-
-  /* ---------- line items ---------- */
-
-  function renderItems() {
-    QS.ui.buildItems(dom.itemRows, state.quote, {
-      changed: function () { renderTotals(); scheduleSave(); },
-      remove: function (idx) {
-        state.quote.items.splice(idx, 1);
-        renderItems();
-        renderTotals();
-        scheduleSave();
-      }
-    });
   }
 
   /* ---------- photos ---------- */
@@ -676,7 +684,6 @@
       search: $('search'),
       savedNote: $('savedNote'),
       sections: $('sections'),
-      itemRows: $('itemRows'),
       tierRow: $('tierRow'),
       decalCount: $('decalCount'),
       decalWhere: $('decalWhere'),
@@ -779,6 +786,10 @@
     /* buttons */
     $('btnSave').addEventListener('click', pushNow);
     $('btnPrint').addEventListener('click', printNow);
+    $('btnSaveDone').addEventListener('click', hideSaved);
+    $('saveModal').addEventListener('click', function (e) {
+      if (e.target === this) hideSaved();
+    });
     $('btnSaveAll').addEventListener('click', pushNow);
     $('btnSettings').addEventListener('click', openSettings);
     $('btnSettingsBack').addEventListener('click', function () {
@@ -815,10 +826,6 @@
       e.target.value = '';
     });
     $('btnNew').addEventListener('click', newQuote);
-    $('btnAddItem').addEventListener('click', function () {
-      state.quote.items.push({ desc: '', qty: 1, unit: 0 });
-      renderItems(); renderTotals(); scheduleSave();
-    });
     $('btnAddLog').addEventListener('click', function () {
       addLogEntry(dom.logInput.value.trim());
       dom.logInput.value = '';
@@ -887,6 +894,7 @@
 
     /* shortcuts */
     document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && $('saveModal').classList.contains('on')) { hideSaved(); return; }
       if (!(e.ctrlKey || e.metaKey)) return;
       if (e.key === 's') { e.preventDefault(); pushNow(); }
       if (e.key === 'p') { e.preventDefault(); printNow(); }

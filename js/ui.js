@@ -106,62 +106,6 @@ QS.ui = (function () {
     });
   }
 
-  /* ---------- line items ---------- */
-
-  function buildItems(tbody, quote, handlers) {
-    tbody.innerHTML = '';
-    (quote.items || []).forEach(function (it, idx) {
-      var tr = el('tr');
-
-      var tdDesc = el('td');
-      var desc = el('input', { type: 'text', placeholder: 'Description' });
-      desc.value = it.desc || '';
-      desc.addEventListener('input', function () {
-        it.desc = desc.value;
-        handlers.changed();
-      });
-      tdDesc.appendChild(desc);
-
-      var tdQty = el('td', { class: 'num' });
-      var qty = el('input', { type: 'number', step: '1', min: '0' });
-      qty.value = it.qty === undefined ? '' : it.qty;
-      qty.addEventListener('input', function () {
-        it.qty = qty.value === '' ? 0 : Number(qty.value);
-        updateAmt();
-        handlers.changed();
-      });
-      tdQty.appendChild(qty);
-
-      var tdUnit = el('td', { class: 'num' });
-      var unit = el('input', { type: 'number', step: '0.01', min: '0' });
-      unit.value = it.unit === undefined ? '' : it.unit;
-      unit.addEventListener('input', function () {
-        it.unit = unit.value === '' ? 0 : Number(unit.value);
-        updateAmt();
-        handlers.changed();
-      });
-      tdUnit.appendChild(unit);
-
-      var tdAmt = el('td', { class: 'num amt' });
-      function updateAmt() {
-        tdAmt.textContent = QS.money((Number(it.qty) || 0) * (Number(it.unit) || 0));
-      }
-      updateAmt();
-
-      var tdDel = el('td', { class: 'num' });
-      var del = el('button', { class: 'del', type: 'button', title: 'Remove line', text: '×' });
-      del.addEventListener('click', function () { handlers.remove(idx); });
-      tdDel.appendChild(del);
-
-      tr.appendChild(tdDesc);
-      tr.appendChild(tdQty);
-      tr.appendChild(tdUnit);
-      tr.appendChild(tdAmt);
-      tr.appendChild(tdDel);
-      tbody.appendChild(tr);
-    });
-  }
-
   /* ---------- photos ---------- */
 
   function buildPhotos(grid, photos, handlers) {
@@ -250,7 +194,6 @@ QS.ui = (function () {
   return {
     el: el,
     buildSections: buildSections,
-    buildItems: buildItems,
     buildPhotos: buildPhotos,
     buildLog: buildLog,
     buildTasks: buildTasks,

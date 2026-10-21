@@ -68,7 +68,7 @@ await send('Page.navigate', { url: URL });
 for (let i = 0; i < 60; i++) {
   await sleep(250);
   const r = await send('Runtime.evaluate', {
-    expression: "!!(window.QS && document.body && /view-/.test(document.body.className) && document.querySelectorAll('#sections .card').length >= 6)",
+    expression: "!!(window.QS && document.body && /view-/.test(document.body.className) && document.querySelectorAll('#sections .card').length >= 5)",
     returnByValue: true
   }).catch(() => null);
   if (r && r.result && r.result.value) break;
@@ -125,9 +125,9 @@ await check('camera input has capture', "document.getElementById('photoCamera').
 await check('library input allows multiple', "document.getElementById('photoFile').hasAttribute('multiple')", true);
 
 /* ---------- the statue spec ---------- */
-await check('six spec cards', "document.querySelectorAll('#sections .card').length", 6);
+await check('five spec cards', "document.querySelectorAll('#sections .card').length", 5);
 await check('card titles', "(function(){var t=[];document.querySelectorAll('#sections .card h2').forEach(function(h){t.push(h.textContent.trim());});return t.join('|');})()",
-  'Customer|The piece|Hat|Jockey|Platform & base|Custom request');
+  'The piece|Hat|Jockey|Platform & base|Custom request');
 await check('hat has five panels', "document.querySelectorAll('#sections input[type=color][data-k^=\"paint.hat.\"]').length", 5);
 await check('jockey has nine colours', "document.querySelectorAll('#sections input[type=color][data-k^=\"paint.figure.\"]').length", 9);
 await check('hat panel names', "(function(){var t=[];document.querySelectorAll('#sections input[type=color][data-k^=\"paint.hat.\"]').forEach(function(i){t.push(i.closest('label').querySelector('span').textContent.trim());});return t.join('|');})()",
@@ -198,9 +198,11 @@ await check('pricing persisted',
   "(async function(){var qs=await QS.store.listQuotes();return qs[0].pricing.paintTier+'/'+qs[0].pricing.decals+'/'+qs[0].pricing.delivery;})()",
   'complex/0/true');
 
-/* extras are opt-in now, not pre-filled */
-await check('extras start empty', "document.querySelectorAll('#itemRows tr').length", 0);
-await check('extras card is labelled', "(function(){var h=document.querySelectorAll('.card h2');for(var i=0;i<h.length;i++){if(/^Extras/.test(h[i].textContent.trim()))return true;}return false;})()", true);
+/* extras and customer details are gone — this is the shop's own sheet */
+await check('no extras card', "(function(){var h=document.querySelectorAll('.card h2');for(var i=0;i<h.length;i++){if(/^Extras/.test(h[i].textContent.trim()))return true;}return false;})()", false);
+await check('no line-item table', "!!document.getElementById('itemRows')", false);
+await check('no add-line button', "!!document.getElementById('btnAddItem')", false);
+await check('no customer labels', "(function(){var t=document.getElementById('sections').innerText;return /Customer|Business \\/ owner/.test(t);})()", false);
 
 /* the corner mark */
 await check('plymr mark in the header', "!!document.querySelector('.brand img.plymr')", true);
@@ -210,15 +212,16 @@ await check('plymr mark is yellow on transparent',
   true);
 
 /* ---------- fill a quote ---------- */
-await evalJs(setField('Name', 'Vince Test'));
-await evalJs(setField('Business / owner', 'Crafters Gallery'));
-await evalJs(setField('Piece', 'Stocky the Jockey — 3 ft'));
+await evalJs(setField('Jockey name', 'Vince Test'));
 await evalJs(setField('Due date', '2026-11-02'));
 await evalJs(setField('Platform', '#1f7a3a'));
 await evalJs(setField('Bill', '#ffd60a'));
 await evalJs(setField('Boots', '#1a1a1a'));
 await sleep(1000);
-await check('customer name in title', "document.getElementById('dTitle').textContent", 'Vince Test');
+await check('jockey name in title', "document.getElementById('dTitle').textContent", 'Vince Test');
+await check('due date kept', "(function(){var l=document.querySelectorAll('#sections label');for(var i=0;i<l.length;i++){var s=l[i].querySelector('span');if(s&&s.textContent.trim()==='Due date')return l[i].querySelector('input').value;}return null;})()", '2026-11-02');
+await check('rush job switch present', "!!document.querySelector('#sections label[data-k=\"job.rush\"] input[type=checkbox]')", true);
+await check('no size field on the piece', "(function(){var l=document.querySelectorAll('#sections label span');for(var i=0;i<l.length;i++){if(/^size$/i.test(l[i].textContent.trim()))return true;}return false;})()", false);
 await check('hat bill colour kept',
   "document.querySelector('#sections input[data-k=\"paint.hat.bill\"]').value", '#ffd60a');
 await check('platform colour kept',
@@ -267,7 +270,7 @@ await check('no horizontal overflow (list)', 'document.documentElement.scrollWid
 await evalJs(`document.getElementById('btnNew').click()`);
 await sleep(1000);
 await check('new quote opens detail', "document.body.classList.contains('view-detail')", true);
-await evalJs(setField('Name', 'Second Job'));
+await evalJs(setField('Jockey name', 'Second Job'));
 await sleep(900);
 await evalJs(`document.getElementById('btnComplete').click()`);
 await sleep(800);
@@ -316,12 +319,35 @@ await evalJs(`document.getElementById('btnSettingsBack').click()`);
 await sleep(500);
 await check('back from settings to list', "document.body.classList.contains('view-list')", true);
 
+/* ---------- save confirmation ---------- */
+await check('save modal hidden at rest', "getComputedStyle(document.getElementById('saveModal')).display", 'none');
+await evalJs(`document.getElementById('btnSaveAll').click()`);
+await sleep(1400);
+await check('list Save confirms', "getComputedStyle(document.getElementById('saveModal')).display", 'flex');
+await check('confirmation says Saved', "document.getElementById('saveModalTitle').textContent", 'Saved');
+await check('confirmation says where it went', "/phone|repo/i.test(document.getElementById('saveModalNote').textContent)", true);
+await check('confirmation has one way out', "document.getElementById('btnSaveDone').textContent.trim()", 'Done');
+await check('confirmation does not spill', "(function(){var r=document.querySelector('#saveModal .modal-card').getBoundingClientRect();return r.left>=0 && r.right<=document.documentElement.clientWidth+0.5;})()", true);
+await evalJs(`document.getElementById('btnSaveDone').click()`);
+await sleep(500);
+await check('confirmation closes', "getComputedStyle(document.getElementById('saveModal')).display", 'none');
+await check('still on the list after confirming', "document.body.classList.contains('view-list')", true);
+
+/* ---------- save confirmation from the detail screen ---------- */
+await evalJs(`document.querySelector('#workList .qrow').click()`);
+await sleep(800);
+await check('opened a quote from the list', "document.body.classList.contains('view-detail')", true);
+await evalJs(`document.getElementById('btnSave').click()`);
+await sleep(1400);
+await check('detail Save confirms too', "getComputedStyle(document.getElementById('saveModal')).display", 'flex');
+await evalJs(`document.getElementById('btnSaveDone').click()`);
+await sleep(500);
+await check('confirming from detail lands back on the list', "document.body.classList.contains('view-list')", true);
+
 /* ---------- screenshots ---------- */
 await evalJs(`document.getElementById('btnNew').click()`);
 await sleep(1000);
-await evalJs(setField('Name', 'Crafters Gallery'));
-await evalJs(setField('Piece', 'Stocky the Jockey — 3 ft'));
-await evalJs(setField('Business / owner', 'Crafters Gallery'));
+await evalJs(setField('Jockey name', 'Crafters Gallery'));
 await evalJs(`document.getElementById('taskInput').value='Prime'; document.getElementById('btnAddTask').click();
   document.getElementById('taskInput').value='Stencil'; document.getElementById('btnAddTask').click();
   document.getElementById('taskInput').value='Top coat'; document.getElementById('btnAddTask').click(); true`);
