@@ -593,11 +593,29 @@
     scheduleSave();
   }
 
-  /* ---------- print ---------- */
+  /* ---------- print / send ---------- */
 
   function printNow() {
     $('printSheet').innerHTML = QS.printDoc.build(state.quote, state.photos);
     setTimeout(function () { window.print(); }, 60);
+  }
+
+  function sendAs(kind) {
+    if (!state.quote) return;
+    var res;
+    try {
+      res = QS.exportDoc.share(kind, state.quote);
+    } catch (e) {
+      return note('Could not build the ' + kind, true);
+    }
+    note('Building the ' + kind + '…', true);
+    res.then(function (r) {
+      if (r.cancelled) return note('Nothing sent');
+      if (r.shared) return note('Shared ' + r.name);
+      note('Saved ' + r.name + ' — attach it to a text or email');
+    }, function () {
+      note('Could not send the ' + kind, true);
+    });
   }
 
   /* ---------- backup ---------- */
@@ -786,6 +804,8 @@
     /* buttons */
     $('btnSave').addEventListener('click', pushNow);
     $('btnPrint').addEventListener('click', printNow);
+    $('btnSendImage').addEventListener('click', function () { sendAs('png'); });
+    $('btnSendPdf').addEventListener('click', function () { sendAs('pdf'); });
     $('btnSaveDone').addEventListener('click', hideSaved);
     $('saveModal').addEventListener('click', function (e) {
       if (e.target === this) hideSaved();

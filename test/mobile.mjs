@@ -319,6 +319,48 @@ await evalJs(`document.getElementById('btnSettingsBack').click()`);
 await sleep(500);
 await check('back from settings to list', "document.body.classList.contains('view-list')", true);
 
+/* ---------- export: a picture or a PDF to text or email ---------- */
+await check('send image button', "document.getElementById('btnSendImage').textContent.trim()", 'Send image');
+await check('send PDF button', "document.getElementById('btnSendPdf').textContent.trim()", 'Send PDF');
+await check('sheet card has three ways out',
+  "document.querySelectorAll('.card-tools .list-tools button').length", 3);
+await check('export module loaded',
+  "typeof QS.exportDoc.png === 'function' && typeof QS.exportDoc.pdf === 'function'", true);
+await check('the sheet actually draws ink', `(async function(){
+  var qs = await QS.store.listQuotes();
+  var pages = QS.exportDoc.render(QS.ensureShape(qs[0]));
+  var c = pages[0], x = c.getContext('2d');
+  var d = x.getImageData(0, 0, c.width, c.height).data;
+  var ink = 0, yellow = 0;
+  for (var p = 0; p < d.length; p += 16) {
+    if (d[p] < 200 || d[p+1] < 200 || d[p+2] < 200) ink++;
+    if (d[p] > 230 && d[p+1] > 190 && d[p+2] < 90) yellow++;
+  }
+  return c.width === 1240 && ink > 2000 && yellow > 50;
+})()`, true);
+await check('picture export is a real png', `(async function(){
+  var qs = await QS.store.listQuotes();
+  var out = QS.exportDoc.png(QS.ensureShape(qs[0]));
+  var b = new Uint8Array(await out.blob.arrayBuffer());
+  return b.length > 20000 && b[0] === 137 && b[1] === 80 && b[2] === 78 && b[3] === 71 &&
+    /^JQ-\\d{4}-\\d{3}\\.png$/.test(out.name);
+})()`, true);
+await check('pdf export is a real pdf', `(async function(){
+  var qs = await QS.store.listQuotes();
+  var out = QS.exportDoc.pdf(QS.ensureShape(qs[0]));
+  var b = new Uint8Array(await out.blob.arrayBuffer());
+  var head = String.fromCharCode.apply(null, b.slice(0, 8));
+  var tail = String.fromCharCode.apply(null, b.slice(b.length - 6));
+  return b.length > 20000 && head === '%PDF-1.4' && tail === '%%EOF\\n' &&
+    /^JQ-\\d{4}-\\d{3}\\.pdf$/.test(out.name);
+})()`, true);
+await check('pdf keeps the quote to one page', `(async function(){
+  var qs = await QS.store.listQuotes();
+  var out = QS.exportDoc.pdf(QS.ensureShape(qs[0]));
+  var txt = await out.blob.text();
+  return (txt.match(/\\/Type \\/Page[^s]/g) || []).length === 1;
+})()`, true);
+
 /* ---------- save confirmation ---------- */
 await check('save modal hidden at rest', "getComputedStyle(document.getElementById('saveModal')).display", 'none');
 await evalJs(`document.getElementById('btnSaveAll').click()`);
