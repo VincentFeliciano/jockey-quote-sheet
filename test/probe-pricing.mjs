@@ -111,7 +111,7 @@ const r = await send('Runtime.evaluate', {
     var img = document.querySelector('.brand img.plymr');
     out.logo = img ? rect(img) : 'missing';
     out.logoLoaded = img ? (img.complete && img.naturalWidth) : 0;
-    out.brandText = document.querySelector('.brand strong').textContent;
+    out.brandText = document.querySelector('.brand').textContent.trim();
     out.barH = Math.round(document.querySelector('#screenList .bar').getBoundingClientRect().height);
 
     /* anything spilling past the right edge anywhere in the detail screen */
@@ -145,7 +145,7 @@ const logoProbe = await send('Runtime.evaluate', {
       logo: { x: Math.round(b.x), y: Math.round(b.y), w: Math.round(b.width), h: Math.round(b.height), right: Math.round(b.right), bottom: Math.round(b.bottom) },
       natural: img.naturalWidth + 'x' + img.naturalHeight,
       insideBar: b.top >= bb.top - 1 && b.bottom <= bb.bottom + 1 && b.left >= bb.left - 1 && b.right <= bb.right + 1,
-      brand: document.querySelector('.brand strong').textContent,
+      brand: document.querySelector('.brand').textContent.trim(),
       overlapNew: (function(){ var n = document.getElementById('btnNew').getBoundingClientRect(); return b.right > n.left; })()
     };
   })()`
