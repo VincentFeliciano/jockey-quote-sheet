@@ -1,2 +1,7 @@
 node_modules/  
 "*.log"  
+
+# probe output
+test/export-sample.*
+test/layout.txt
+test/_*.txt
