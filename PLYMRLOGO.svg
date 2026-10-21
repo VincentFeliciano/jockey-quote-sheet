@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 780 1688">
+  <defs>
+    <style>
+      .cls-1{fill:#ffffff;stroke:#ffd60a;stroke-width:53;stroke-miterlimit:10}
+      .cls-2{font-family:&apos;Helvetica Black&apos;;font-size:125;fill:#ffd60a;letter-spacing:-4.5;text-anchor:middle}
+    </style>
+  </defs>
+  <title>Untitled-1</title>
+  <g id="Layer_1" data-name="Layer 1">
+    <g>
+      <path d="M229.394 731.66 L101.903 731.66 L101.903 956.34 L229.394 956.34" class="cls-1"/>
+      <path d="M550.106 731.66 L678.097 731.66 L678.097 956.34 L550.106 956.34" class="cls-1"/>
+    </g>
+    <text transform="matrix(1 0 0 1 144.235 773.499)" x="245.765" y="59.418" xml:space="preserve" class="cls-2"><tspan x="245.765" y="59.418" dy="50" textLength="461.618" lengthAdjust="spacingAndGlyphs">PLYMR</tspan></text>
+  </g>
+</svg>

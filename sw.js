@@ -1,5 +1,5 @@
 /* Offline shell. The shop has bad signal; the app should still open. */
-var CACHE = 'quote-sheet-v5';
+var CACHE = 'quote-sheet-v6';
 var SHELL = [
   './',
   'index.html',
@@ -13,7 +13,8 @@ var SHELL = [
   'js/app.js',
   'manifest.json',
   'icons/icon-192.png',
-  'icons/plymr.png'
+  'icons/plymr.png',
+  'icons/cg.svg'
 ];
 
 self.addEventListener('install', function (e) {

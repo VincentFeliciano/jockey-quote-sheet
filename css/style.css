@@ -78,6 +78,13 @@ body.view-settings .screen-settings { display: flex; }
   /* the mark is yellow on transparent; drop any dark fringe */
   image-rendering: -webkit-optimize-contrast;
 }
+.brand .brand-for {
+  font-size: 10px; letter-spacing: .12em; text-transform: lowercase;
+  color: var(--muted); line-height: 1; padding-bottom: 1px;
+}
+.brand .cg {
+  height: 28px; width: auto; display: block;
+}
 .bar-tools { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; }
 .bar-tools .btn { flex: 0 0 auto; }
 
