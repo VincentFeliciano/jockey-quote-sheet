@@ -163,9 +163,41 @@
       note('Saved to repo' + (r.uploaded ? ' + ' + r.uploaded + ' photo(s)' : ''));
       showSaved('In the repo' + (r.uploaded ? ', with ' + r.uploaded + ' photo(s)' : '') + '.');
     } catch (e) {
-      renderSyncState(e.message);
+      var why = (e && e.message) ? e.message : 'The push failed.';
+      var code = (e && e.status) ? ' [' + e.status + ']' : '';
+      renderSyncState(why);
       note('On phone only — push failed', true);
-      showSaved('On this phone only — the repo push failed.');
+      showSaved('Saved on this phone only. ' + why + code);
+    }
+  }
+
+  async function testSyncNow() {
+    var box = $('syncState');
+    var btn = $('btnSyncTest');
+    if (!QS.sync.isConfigured()) {
+      renderSyncState('Paste a token and Save settings first.');
+      return;
+    }
+    if (btn) btn.disabled = true;
+    if (box) { box.classList.remove('bad'); box.textContent = 'Testing…'; }
+    try {
+      var r = await QS.sync.testConnection();
+      renderSyncState(r.ok ? null : r.message);
+      if (r.ok) {
+        var at = await QS.sync.lastSync();
+        if (box) {
+          box.classList.remove('bad');
+          box.textContent = r.message + ' Last sync ' +
+            (at ? new Date(at).toLocaleString() : 'never') + '.';
+        }
+        note('Repo reachable');
+      } else {
+        note('Repo check failed — see the note', true);
+      }
+    } catch (e) {
+      renderSyncState(e && e.message ? e.message : 'The check itself failed.');
+    } finally {
+      if (btn) btn.disabled = false;
     }
   }
 
@@ -827,6 +859,7 @@
     });
     $('btnDownload').addEventListener('click', exportBackup);
     $('btnSyncSave').addEventListener('click', saveSyncSettings);
+    $('btnSyncTest').addEventListener('click', testSyncNow);
     $('btnSyncPull').addEventListener('click', pullNow);
     if ($('btnSyncPaste')) {
       $('btnSyncPaste').addEventListener('click', async function () {

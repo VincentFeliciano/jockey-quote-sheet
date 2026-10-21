@@ -106,34 +106,105 @@ QS.sync = (function () {
 
   /* ---------- GitHub API ---------- */
 
+  /* One place that turns a GitHub response into plain English. The status is
+     kept on the error so the save dialog can say what actually happened
+     instead of "push failed". */
+  function httpError(status, json, what) {
+    var gh = (json && json.message) || '';
+    var plain;
+    if (status === 401) plain = 'GitHub rejected the token (401). Paste a fresh one.';
+    else if (status === 403) plain = 'The token is not allowed to write here (403). It needs Contents: read and write on this repo.';
+    else if (status === 404) plain = 'GitHub cannot see ' + what + ' (404). Check the owner, repo and branch, and that the token can reach it.';
+    else if (status === 409) plain = 'The repo copy changed while saving (409). Press Save again.';
+    else if (status === 422) plain = 'GitHub refused the write (422).' + (gh ? ' ' + gh : ' The branch may not exist yet.');
+    else if (status === 429) plain = 'GitHub is rate limiting this token (429). Wait a minute, then Save again.';
+    else if (status >= 500) plain = 'GitHub itself is having trouble (' + status + '). Try again shortly.';
+    else plain = 'GitHub said ' + status + (gh ? ': ' + gh : '.');
+    var err = new Error(plain);
+    err.status = status;
+    err.github = gh;
+    return err;
+  }
+
   async function api(path, opts) {
     opts = opts || {};
+    var method = opts.method || 'GET';
     var c = cfg();
     if (!c.token) throw new Error('No repo token yet — open Repo sync and paste one.');
     var url = 'https://api.github.com/repos/' + encodeURIComponent(c.owner) +
       '/' + encodeURIComponent(c.repo) + path;
-    var res = await fetch(url, {
-      method: opts.method || 'GET',
-      cache: 'no-store',
-      headers: {
-        Authorization: 'Bearer ' + c.token,
-        Accept: 'application/vnd.github+json',
-        'X-GitHub-Api-Version': '2022-11-28',
-        'Content-Type': 'application/json'
-      },
-      body: opts.body ? JSON.stringify(opts.body) : undefined
-    });
-    if (res.status === 404) return null;
+    var res;
+    try {
+      res = await fetch(url, {
+        method: method,
+        cache: 'no-store',
+        headers: {
+          Authorization: 'Bearer ' + c.token,
+          Accept: 'application/vnd.github+json',
+          'X-GitHub-Api-Version': '2022-11-28',
+          'Content-Type': 'application/json'
+        },
+        body: opts.body ? JSON.stringify(opts.body) : undefined
+      });
+    } catch (e) {
+      var net = new Error('Could not reach GitHub. The phone looks offline, or something is blocking api.github.com.');
+      net.status = 0;
+      throw net;
+    }
     var text = await res.text();
     var json = null;
     try { json = text ? JSON.parse(text) : null; } catch (e) { json = null; }
-    if (!res.ok) {
-      var msg = (json && json.message) || ('HTTP ' + res.status);
-      if (res.status === 401) msg = 'Token rejected (401). Paste a fresh one.';
-      if (res.status === 403) msg = 'Token lacks Contents write on this repo (403).';
-      throw new Error(msg);
-    }
+    /* A missing data file is normal on a first save; a missing repo is not, so
+       only a read gets to treat 404 as "nothing there yet". */
+    if (res.status === 404 && method === 'GET') return null;
+    if (!res.ok) throw httpError(res.status, json, c.owner + '/' + c.repo + ' at ' + path.replace(/^\//, ''));
     return json;
+  }
+
+  /* Is the token, the repo and the branch actually usable from this phone?
+     Returns a plain-English verdict; never includes the token itself. */
+  async function testConnection() {
+    var c = cfg();
+    var out = { ok: false, status: 0, owner: c.owner, repo: c.repo, branch: c.branch, message: '' };
+    if (!c.token) { out.message = 'No token saved on this phone yet.'; return out; }
+    var repo;
+    try {
+      repo = await api('');
+    } catch (e) {
+      out.status = e.status || 0;
+      out.message = e.message;
+      return out;
+    }
+    if (!repo) {
+      out.status = 404;
+      out.message = 'GitHub cannot see ' + c.owner + '/' + c.repo + ' (404). Check the spelling, and that the token is scoped to it.';
+      return out;
+    }
+    out.private = !!repo.private;
+    var perms = repo.permissions || {};
+    if (perms.push === false) {
+      out.status = 403;
+      out.message = 'The token can read ' + c.owner + '/' + c.repo + ' but not write to it (403). It needs Contents: read and write.';
+      return out;
+    }
+    var b;
+    try {
+      b = await api('/branches/' + encodeURIComponent(c.branch));
+    } catch (e) {
+      out.status = e.status || 0;
+      out.message = e.message;
+      return out;
+    }
+    if (!b) {
+      out.status = 404;
+      out.message = 'Branch "' + c.branch + '" does not exist on ' + c.owner + '/' + c.repo + '.';
+      return out;
+    }
+    out.ok = true;
+    out.status = 200;
+    out.message = 'Connected. ' + c.owner + '/' + c.repo + ' on ' + c.branch +
+      (out.private ? ' (private)' : '') + ', and the token can write.';
+    return out;
   }
 
   async function getFile(path) {
@@ -352,6 +423,7 @@ QS.sync = (function () {
     cfg: cfg,
     saveCfg: saveCfg,
     isConfigured: isConfigured,
+    testConnection: testConnection,
     pull: pull,
     push: push,
     lastSync: lastSync,
