@@ -83,6 +83,8 @@ await evalJs(`(async function(){
   q.paint.backArt = true; q.paint.backText = 'Saddle and number 7';
   q.paint.method = 'Mixed'; q.paint.custom = 'Vinyl cut lettering on the base, matte top coat.';
   q.pricing = { paintTier: 'complex', decals: 2, decalWhere: 'Front and back', delivery: true };
+  q.restore = { concrete: true, work: 'Both', strip: true, resurface: true,
+    note: 'Crack down the left shoulder, repointed and sealed.' };
   q.discount = 25; q.taxRate = 0; q.deposit = 100;
   q.notes = 'Customer wants it before the meet. Base lettering in white vinyl, sealed with two coats.';
   q.log = [{ ts: new Date().toISOString(), text: 'Deposit taken' }];
@@ -92,7 +94,9 @@ await evalJs(`(async function(){
 
 const png = await evalJs(`(async function(){
   var qs = await QS.store.listQuotes();
-  var out = QS.exportDoc.png(QS.ensureShape(qs[0]));
+  var q = QS.ensureShape(qs[0]);
+  window.__restoreSeen = JSON.stringify(q.restore);
+  var out = QS.exportDoc.png(q);
   var b = new Uint8Array(await out.blob.arrayBuffer());
   var s = ''; for (var i = 0; i < b.length; i++) s += String.fromCharCode(b[i]);
   return { name: out.name, b64: btoa(s), pages: out.pages };
@@ -108,6 +112,7 @@ const pdf = await evalJs(`(async function(){
 })()`);
 writeFileSync(resolve('test/export-sample.pdf'), Buffer.from(pdf.b64, 'base64'));
 
+console.log('restore on the record: ' + await evalJs('window.__restoreSeen'));
 console.log('png ' + png.name + ' pages=' + png.pages + ' bytes=' + Buffer.from(png.b64, 'base64').length);
 console.log('pdf ' + pdf.name + ' pages=' + pdf.pages + ' bytes=' + Buffer.from(pdf.b64, 'base64').length);
 

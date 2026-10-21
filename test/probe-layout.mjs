@@ -87,6 +87,8 @@ const report = await evalJs(`(async function(){
   q.paint.method = 'Mixed';
   q.paint.custom = 'Vinyl cut lettering on the base, matte top coat, extra detail on the boots.';
   q.pricing = { paintTier: 'complex', decals: 2, decalWhere: 'Front and back', delivery: true };
+  q.restore = { concrete: true, work: 'Both', strip: true, resurface: true,
+    note: 'Crack down the left shoulder, repointed and sealed.' };
   q.discount = 25; q.taxRate = 0; q.deposit = 100;
   q.notes = 'Customer wants it before the meet. Base lettering in white vinyl, sealed with two coats.';
   q.log = [{ ts: new Date().toISOString(), text: 'Deposit taken' }];

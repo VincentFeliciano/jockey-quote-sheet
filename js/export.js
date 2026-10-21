@@ -213,6 +213,17 @@ QS.exportDoc = (function () {
       { label: 'Method', value: p.method },
       { label: 'Asked for', value: p.custom }
     ]);
+
+    var r = QS.fillRestore(q.restore);
+    if (QS.hasRestore(q)) {
+      specBlock(d, 'Restoration', [
+        { label: 'Piece', value: r.concrete ? 'Concrete' : 'Not concrete' },
+        { label: 'Work needed', value: r.work && r.work !== 'None' ? r.work : '' },
+        { label: 'Strip old paint', value: r.strip ? QS.money(QS.RESTORE_STRIP) : '' },
+        { label: 'Resurface with cement', value: r.resurface ? QS.money(QS.RESTORE_SURFACE) : '' },
+        { label: 'Notes', value: r.note }
+      ]);
+    }
   }
 
   function line(d, label, value) {
@@ -234,7 +245,8 @@ QS.exportDoc = (function () {
   function pricing(d, q) {
     var t = QS.totals(q);
     var p = QS.fillPricing(q.pricing);
-    var rows = 3;
+    var rows = 3 + (t.decalCount ? 1 : 0) +
+      (t.restoreStrip ? 1 : 0) + (t.restoreSurface ? 1 : 0);
     room(d, 70 + rows * 46);
     sectionTitle(d, 'Pricing');
     line(d, 'Paint job' + (t.paintLabel ? ' \u2014 ' + t.paintLabel : ''), QS.money(t.paint));
@@ -243,6 +255,8 @@ QS.exportDoc = (function () {
         QS.money(t.decals));
     }
     line(d, 'Delivery', t.delivery ? QS.money(t.delivery) : '\u2014');
+    if (t.restoreStrip) line(d, 'Strip old paint', QS.money(t.restoreStrip));
+    if (t.restoreSurface) line(d, 'Resurface with cement', QS.money(t.restoreSurface));
     d.y += 14;
   }
 

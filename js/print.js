@@ -102,7 +102,20 @@ QS.printDoc = (function () {
       specRow('Asked for', esc(p.custom))
     ]);
 
-    /* pricing: paint job, decals, delivery */
+    /* restoration — only when there is something to say */
+    var r = QS.fillRestore(q.restore);
+    if (QS.hasRestore(q)) {
+      var work = r.work && r.work !== 'None' ? esc(r.work) : '';
+      paintBlock('Restoration', [
+        r.concrete ? specRow('Piece', 'Concrete') : specRow('Piece', 'Not concrete'),
+        specRow('Work needed', work),
+        r.strip ? specRow('Strip old paint', QS.money(QS.RESTORE_STRIP)) : '',
+        r.resurface ? specRow('Resurface with cement', QS.money(QS.RESTORE_SURFACE)) : '',
+        specRow('Notes', nl2br(r.note))
+      ]);
+    }
+
+    /* pricing: paint job, decals, delivery, restoration */
     out.push('<div class="p-sec"><h2>Pricing</h2>');
     out.push('<table class="p-items"><tbody>');
     out.push('<tr><td>Paint job' + (t.paintLabel ? ' &mdash; ' + esc(t.paintLabel) : '') +
@@ -115,6 +128,14 @@ QS.printDoc = (function () {
     }
     out.push('<tr><td>Delivery</td><td class="num">' +
       (t.delivery ? QS.money(t.delivery) : '&mdash;') + '</td></tr>');
+    if (t.restoreStrip) {
+      out.push('<tr><td>Strip old paint</td><td class="num">' +
+        QS.money(t.restoreStrip) + '</td></tr>');
+    }
+    if (t.restoreSurface) {
+      out.push('<tr><td>Resurface with cement</td><td class="num">' +
+        QS.money(t.restoreSurface) + '</td></tr>');
+    }
     out.push('</tbody></table></div>');
 
     out.push('<div class="p-totals">');

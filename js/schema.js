@@ -63,6 +63,19 @@ QS.SECTIONS = [
       { k: 'paint.method', label: 'Method', type: 'select',
         options: ['Painted', 'Vinyl cut', 'Stencil', 'Mixed'] }
     ]
+  },
+  {
+    id: 'restore',
+    title: 'Restoration',
+    fields: [
+      { k: 'restore.concrete', label: 'Concrete piece', type: 'checkbox' },
+      { k: 'restore.work', label: 'What it needs', type: 'select',
+        options: ['None', 'Surface work', 'Structure work', 'Both'] },
+      { k: 'restore.strip',     label: 'Strip the old paint',    type: 'checkbox' },
+      { k: 'restore.resurface', label: 'Resurface with cement',  type: 'checkbox' },
+      { k: 'restore.note', label: 'Restoration notes', type: 'textarea', rows: 3, wide: true,
+        placeholder: 'Cracks, missing chunks, what came off and what went back on…' }
+    ]
   }
 ];
 
@@ -81,6 +94,44 @@ QS.PAINT_DEFAULTS = {
 };
 
 QS.PREPARED_BY = 'Vincent Feliciano';
+
+/* ---------- restoration ----------
+
+   A statue that comes in for restoration is stripped of its old paint and
+   then resurfaced with cement — but only when each job actually needs
+   doing, so both are switches rather than automatic add-ons. */
+
+QS.RESTORE_STRIP = 150;     /* stripping the old paint off */
+QS.RESTORE_SURFACE = 100;   /* resurfacing with cement */
+
+QS.RESTORE_DEFAULTS = {
+  concrete: false,
+  work: 'None',
+  strip: false,
+  resurface: false,
+  note: ''
+};
+
+/* Records made before restoration existed come back with every key
+   present and nothing charged. */
+QS.fillRestore = function (src) {
+  var out = JSON.parse(JSON.stringify(QS.RESTORE_DEFAULTS));
+  src = src || {};
+  if (src.concrete !== undefined && src.concrete !== null) out.concrete = !!src.concrete;
+  if (typeof src.work === 'string' && src.work) out.work = src.work;
+  if (src.strip !== undefined && src.strip !== null) out.strip = !!src.strip;
+  if (src.resurface !== undefined && src.resurface !== null) out.resurface = !!src.resurface;
+  if (typeof src.note === 'string') out.note = src.note;
+  return out;
+};
+
+/* True when there is anything at all to say about restoration, so the
+   printed sheet and the export can leave the block out of a plain paint job. */
+QS.hasRestore = function (q) {
+  var r = QS.fillRestore((q && q.restore) || null);
+  return !!(r.concrete || r.strip || r.resurface || r.note ||
+            (r.work && r.work !== 'None'));
+};
 
 /* ---------- pricing ----------
 
@@ -127,17 +178,22 @@ QS.fillPricing = function (src) {
 /* The money the pricing block contributes — paint job, decals, delivery. */
 QS.charges = function (q) {
   var p = QS.fillPricing((q && q.pricing) || null);
+  var r = QS.fillRestore((q && q.restore) || null);
   var tier = QS.paintTier(p.paintTier);
   var paint = tier ? tier.price : 0;
   var decals = p.decals * QS.DECAL_PRICE;
   var delivery = p.delivery ? QS.DELIVERY_FEE : 0;
+  var strip = r.strip ? QS.RESTORE_STRIP : 0;
+  var surface = r.resurface ? QS.RESTORE_SURFACE : 0;
   return {
     paint: paint,
     paintLabel: tier ? tier.label : '',
     decals: decals,
     decalCount: p.decals,
     delivery: delivery,
-    total: paint + decals + delivery
+    restoreStrip: strip,
+    restoreSurface: surface,
+    total: paint + decals + delivery + strip + surface
   };
 };
 
@@ -205,6 +261,7 @@ QS.newQuote = function (number) {
     completedAt: '',
     job: { jockey: '', due: '', rush: false },
     paint: QS.fillPaint(null),
+    restore: QS.fillRestore(null),
     pricing: QS.fillPricing(null),
     discount: 0,
     taxRate: 0,
@@ -266,6 +323,8 @@ QS.totals = function (q) {
     decals: ch.decals,
     decalCount: ch.decalCount,
     delivery: ch.delivery,
+    restoreStrip: ch.restoreStrip,
+    restoreSurface: ch.restoreSurface,
     sub: sub,
     disc: disc,
     tax: tax,
@@ -286,6 +345,7 @@ QS.ensureShape = function (q) {
   if (q.completedAt === undefined) q.completedAt = '';
   if (!q.stage) q.stage = q.completedAt ? 'done' : 'quote';
   q.paint = QS.fillPaint(q.paint);
+  q.restore = QS.fillRestore(q.restore);
   q.pricing = QS.fillPricing(q.pricing);
   if (!q.preparedBy) q.preparedBy = QS.PREPARED_BY;
   delete q.silks;

@@ -125,9 +125,9 @@ await check('camera input has capture', "document.getElementById('photoCamera').
 await check('library input allows multiple', "document.getElementById('photoFile').hasAttribute('multiple')", true);
 
 /* ---------- the statue spec ---------- */
-await check('five spec cards', "document.querySelectorAll('#sections .card').length", 5);
+await check('six spec cards', "document.querySelectorAll('#sections .card').length", 6);
 await check('card titles', "(function(){var t=[];document.querySelectorAll('#sections .card h2').forEach(function(h){t.push(h.textContent.trim());});return t.join('|');})()",
-  'The piece|Hat|Jockey|Platform & base|Custom request');
+  'The piece|Hat|Jockey|Platform & base|Custom request|Restoration');
 await check('hat has five panels', "document.querySelectorAll('#sections input[type=color][data-k^=\"paint.hat.\"]').length", 5);
 await check('jockey has nine colours', "document.querySelectorAll('#sections input[type=color][data-k^=\"paint.figure.\"]').length", 9);
 await check('hat panel names', "(function(){var t=[];document.querySelectorAll('#sections input[type=color][data-k^=\"paint.hat.\"]').forEach(function(i){t.push(i.closest('label').querySelector('span').textContent.trim());});return t.join('|');})()",
@@ -146,6 +146,18 @@ await check('meta row is number, status, prepared by',
   "(function(){return document.querySelectorAll('.doc-head .meta-row label').length;})()", 3);
 await check('prepared by is Vincent', "document.getElementById('metaPreparedBy').value", 'Vincent Feliciano');
 await check('no silks section left', "/silks/i.test(document.getElementById('sections').innerText)", false);
+
+/* ---------- restoration ---------- */
+await check('restoration card present',
+  "(function(){var h=document.querySelectorAll('#sections .card h2');for(var i=0;i<h.length;i++){if(h[i].textContent.trim()==='Restoration')return true;}return false;})()", true);
+await check('concrete switch present', "!!document.querySelector('#sections label[data-k=\"restore.concrete\"] input[type=checkbox]')", true);
+await check('strip switch present', "!!document.querySelector('#sections label[data-k=\"restore.strip\"] input[type=checkbox]')", true);
+await check('resurface switch present', "!!document.querySelector('#sections label[data-k=\"restore.resurface\"] input[type=checkbox]')", true);
+await check('work type choices',
+  "(function(){var s=document.querySelector('#sections select[data-k=\"restore.work\"]');if(!s)return 'missing';var o=[];s.querySelectorAll('option').forEach(function(x){o.push(x.value);});return o.join('|');})()",
+  '|None|Surface work|Structure work|Both');
+await check('strip line hidden until needed', "document.getElementById('rowStrip').hidden", true);
+await check('resurface line hidden until needed', "document.getElementById('rowSurface').hidden", true);
 
 /* ---------- pricing: paint tier, decals, delivery ---------- */
 await check('paint job card exists', "!!document.getElementById('tierRow')", true);
@@ -192,11 +204,38 @@ await check('delivery switches on', "document.getElementById('delivery').checked
 await check('delivery line shows the fee', "document.getElementById('pDelivery').textContent", '$50.00');
 await check('total includes delivery', "document.getElementById('tTotal').textContent", '$250.00');
 
+/* restoration — strip and resurface are separate charges */
+await evalJs(`document.querySelector('#sections label[data-k="restore.concrete"] input').click()`);
+await sleep(200);
+await evalJs(`document.querySelector('#sections label[data-k="restore.strip"] input').click()`);
+await sleep(300);
+await check('concrete switch toggles',
+  "document.querySelector('#sections label[data-k=\"restore.concrete\"] input').checked", true);
+await check('strip switches on',
+  "document.querySelector('#sections label[data-k=\"restore.strip\"] input').checked", true);
+await check('strip line appears', "document.getElementById('rowStrip').hidden", false);
+await check('strip costs 150', "document.getElementById('pStrip').textContent", '$150.00');
+await check('total includes the strip', "document.getElementById('tTotal').textContent", '$400.00');
+
+await evalJs(`document.querySelector('#sections label[data-k="restore.resurface"] input').click()`);
+await sleep(300);
+await check('resurface line appears', "document.getElementById('rowSurface').hidden", false);
+await check('resurface costs 100', "document.getElementById('pSurface').textContent", '$100.00');
+await check('total includes both', "document.getElementById('tTotal').textContent", '$500.00');
+
+/* turning the strip back off takes its money away again */
+await evalJs(`document.querySelector('#sections label[data-k="restore.strip"] input').click()`);
+await sleep(300);
+await check('strip line hides again', "document.getElementById('rowStrip').hidden", true);
+await check('total drops the strip', "document.getElementById('tTotal').textContent", '$350.00');
+await evalJs(`document.querySelector('#sections label[data-k="restore.strip"] input').click()`);
+await sleep(250);
+
 /* the whole thing survives a reload, since it is saved to the store */
 await sleep(900);
 await check('pricing persisted', 
-  "(async function(){var qs=await QS.store.listQuotes();return qs[0].pricing.paintTier+'/'+qs[0].pricing.decals+'/'+qs[0].pricing.delivery;})()",
-  'complex/0/true');
+  "(async function(){var qs=await QS.store.listQuotes();return qs[0].pricing.paintTier+'/'+qs[0].pricing.decals+'/'+qs[0].pricing.delivery+'/'+qs[0].restore.concrete+'/'+qs[0].restore.strip+'/'+qs[0].restore.resurface;})()",
+  'complex/0/true/true/true/true');
 
 /* extras and customer details are gone — this is the shop's own sheet */
 await check('no extras card', "(function(){var h=document.querySelectorAll('.card h2');for(var i=0;i<h.length;i++){if(/^Extras/.test(h[i].textContent.trim()))return true;}return false;})()", false);

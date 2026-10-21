@@ -206,6 +206,10 @@
     if (dom.pPaint) dom.pPaint.textContent = QS.money(t.paint);
     if (dom.pDecals) dom.pDecals.textContent = QS.money(t.decals);
     if (dom.pDelivery) dom.pDelivery.textContent = QS.money(t.delivery);
+    if (dom.pStrip) dom.pStrip.textContent = QS.money(t.restoreStrip);
+    if (dom.pSurface) dom.pSurface.textContent = QS.money(t.restoreSurface);
+    if (dom.rowStrip) dom.rowStrip.hidden = !t.restoreStrip;
+    if (dom.rowSurface) dom.rowSurface.hidden = !t.restoreSurface;
   }
 
   /* ---------- pricing: paint tier, decals, delivery ---------- */
@@ -537,6 +541,7 @@
   function onFieldChange(path, value) {
     QS.setPath(state.quote, path, value);
     if (path.indexOf('job') === 0) syncTitle();
+    if (path.indexOf('restore') === 0) renderTotals();
     scheduleSave();
   }
 
@@ -711,6 +716,10 @@
       pPaint: $('pPaint'),
       pDecals: $('pDecals'),
       pDelivery: $('pDelivery'),
+      pStrip: $('pStrip'),
+      pSurface: $('pSurface'),
+      rowStrip: $('rowStrip'),
+      rowSurface: $('rowSurface'),
       photoGrid: $('photoGrid'),
       photoDrop: $('photoDrop'),
       photoFile: $('photoFile'),

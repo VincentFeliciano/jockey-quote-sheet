@@ -54,7 +54,7 @@ QS.ui = (function () {
     }
 
     if (f.type === 'select') {
-      var sel = el('select');
+      var sel = el('select', { 'data-k': f.k });
       sel.appendChild(el('option', { value: '', text: '—' }));
       (f.options || []).forEach(function (o) {
         var opt = el('option', { value: o, text: o });

@@ -69,6 +69,41 @@ q.discount = 45;
 t = Q.totals(q);
 ok('discount off the total = 225', t.total === 225, 'got ' + t.total);
 
+/* ---------- restoration ---------- */
+ok('strip is 150', Q.RESTORE_STRIP === 150);
+ok('resurface is 100', Q.RESTORE_SURFACE === 100);
+
+const plain = Q.newQuote('JQ-2026-002');
+ok('new quote has restoration', !!plain.restore);
+ok('new quote charges no restoration',
+  Q.totals(plain).restoreStrip === 0 && Q.totals(plain).restoreSurface === 0);
+ok('new quote reports no restoration', Q.hasRestore(plain) === false);
+
+plain.restore.strip = true;
+t = Q.totals(plain);
+ok('strip alone adds 150', t.restoreStrip === 150 && t.restoreSurface === 0, JSON.stringify(t));
+ok('strip alone totals 325', t.total === 325, 'got ' + t.total);
+
+plain.restore.strip = false;
+plain.restore.resurface = true;
+t = Q.totals(plain);
+ok('resurface alone adds 100', t.restoreSurface === 100 && t.restoreStrip === 0);
+ok('resurface alone totals 275', t.total === 275, 'got ' + t.total);
+
+plain.restore.strip = true;
+plain.restore.concrete = true;
+plain.restore.work = 'Both';
+t = Q.totals(plain);
+ok('strip and resurface together add 250',
+  t.restoreStrip + t.restoreSurface === 250, JSON.stringify(t));
+ok('both together total 425', t.total === 425, 'got ' + t.total);
+ok('restoration is reported', Q.hasRestore(plain) === true);
+
+const legacy = Q.ensureShape({ id: 'y', job: { jockey: 'Old', due: '', rush: false } });
+ok('old record gains restoration', !!legacy.restore);
+ok('old record charges no restoration', Q.totals(legacy).total === 175, 'got ' + Q.totals(legacy).total);
+ok('old record reports no restoration', Q.hasRestore(legacy) === false);
+
 /* ---------- old records: extras are stripped, not counted ---------- */
 const old = Q.ensureShape({
   id: 'x',
