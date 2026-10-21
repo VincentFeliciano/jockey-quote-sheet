@@ -16,26 +16,26 @@ QS.SECTIONS = [
     id: 'hat',
     title: 'Hat',
     fields: [
-      { k: 'paint.hat.front', label: 'Front panel', type: 'color' },
-      { k: 'paint.hat.left',  label: 'Left side',   type: 'color' },
-      { k: 'paint.hat.right', label: 'Right side',  type: 'color' },
-      { k: 'paint.hat.back',  label: 'Back panel',  type: 'color' },
-      { k: 'paint.hat.bill',  label: 'Bill',        type: 'color' }
+      { k: 'paint.hat.front', label: 'Front panel', type: 'color', design: true },
+      { k: 'paint.hat.left',  label: 'Left side',   type: 'color', design: true },
+      { k: 'paint.hat.right', label: 'Right side',  type: 'color', design: true },
+      { k: 'paint.hat.back',  label: 'Back panel',  type: 'color', design: true },
+      { k: 'paint.hat.bill',  label: 'Bill',        type: 'color', design: true }
     ]
   },
   {
     id: 'figure',
     title: 'Jockey',
     fields: [
-      { k: 'paint.figure.eyes',      label: 'Eyes',        type: 'color' },
-      { k: 'paint.figure.hair',      label: 'Hair',        type: 'color' },
-      { k: 'paint.figure.body',      label: 'Body',        type: 'color' },
-      { k: 'paint.figure.sleeves',   label: 'Sleeves',     type: 'color' },
-      { k: 'paint.figure.cuffs',     label: 'Cuffs',       type: 'color' },
-      { k: 'paint.figure.buttons',   label: 'Buttons',     type: 'color' },
-      { k: 'paint.figure.pants',     label: 'Pants',       type: 'color' },
-      { k: 'paint.figure.boots',     label: 'Boots',       type: 'color' },
-      { k: 'paint.figure.bootCuffs', label: 'Boot cuffs',  type: 'color' },
+      { k: 'paint.figure.eyes',      label: 'Eyes',        type: 'color', design: true },
+      { k: 'paint.figure.hair',      label: 'Hair',        type: 'color', design: true },
+      { k: 'paint.figure.body',      label: 'Body',        type: 'color', design: true },
+      { k: 'paint.figure.sleeves',   label: 'Sleeves',     type: 'color', design: true },
+      { k: 'paint.figure.cuffs',     label: 'Cuffs',       type: 'color', design: true },
+      { k: 'paint.figure.buttons',   label: 'Buttons',     type: 'color', design: true },
+      { k: 'paint.figure.pants',     label: 'Pants',       type: 'color', design: true },
+      { k: 'paint.figure.boots',     label: 'Boots',       type: 'color', design: true },
+      { k: 'paint.figure.bootCuffs', label: 'Boot cuffs',  type: 'color', design: true },
       { k: 'paint.chestLogo', label: 'Logo on the chest', type: 'checkbox' },
       { k: 'paint.chestText', label: 'Chest logo / lettering', type: 'text',
         placeholder: 'what goes on the chest', wide: true },
@@ -48,8 +48,8 @@ QS.SECTIONS = [
     id: 'base',
     title: 'Platform & base',
     fields: [
-      { k: 'paint.base.platform',  label: 'Platform',              type: 'color' },
-      { k: 'paint.base.base',      label: 'Base',                  type: 'color' },
+      { k: 'paint.base.platform',  label: 'Platform',              type: 'color', design: true },
+      { k: 'paint.base.base',      label: 'Base',                  type: 'color', design: true },
       { k: 'paint.base.frontText', label: 'Text on base — front',  type: 'text', wide: true },
       { k: 'paint.base.backText',  label: 'Text on base — back',   type: 'text', wide: true }
     ]
@@ -82,12 +82,12 @@ QS.SECTIONS = [
 /* Statue paint defaults. Platform is green and base is black unless told
    otherwise — that is how they usually leave the shop. */
 QS.PAINT_DEFAULTS = {
-  hat: { front: '', left: '', right: '', back: '', bill: '' },
+  hat: { front: '', frontDesign: '', left: '', leftDesign: '', right: '', rightDesign: '', back: '', backDesign: '', bill: '', billDesign: '' },
   figure: {
-    eyes: '', hair: '', body: '', sleeves: '', cuffs: '',
-    buttons: '', pants: '', boots: '', bootCuffs: ''
+    eyes: '', eyesDesign: '', hair: '', hairDesign: '', body: '', bodyDesign: '', sleeves: '', sleevesDesign: '', cuffs: '', cuffsDesign: '',
+    buttons: '', buttonsDesign: '', pants: '', pantsDesign: '', boots: '', bootsDesign: '', bootCuffs: '', bootCuffsDesign: ''
   },
-  base: { platform: '#2f7d32', base: '#000000', frontText: '', backText: '' },
+  base: { platform: '#2f7d32', platformDesign: '', base: '#000000', baseDesign: '', frontText: '', backText: '' },
   chestLogo: false, chestText: '',
   backArt: false, backText: '',
   method: '', custom: ''
@@ -205,6 +205,14 @@ QS.fillPaint = function (src) {
   ['hat', 'figure', 'base'].forEach(function (grp) {
     var s = src[grp] || {};
     Object.keys(out[grp]).forEach(function (k) {
+      if (s[k] !== undefined && s[k] !== null) out[grp][k] = s[k];
+    });
+    /* The colour name and the design note are typed on the same row as the
+       swatch, so they are not in the defaults table. Keep them, or the box
+       empties itself the moment the quote is reloaded. */
+    Object.keys(s).forEach(function (k) {
+      if (!/Design$|Name$/.test(k)) return;
+      if (out[grp][k] === undefined) out[grp][k] = '';
       if (s[k] !== undefined && s[k] !== null) out[grp][k] = s[k];
     });
   });

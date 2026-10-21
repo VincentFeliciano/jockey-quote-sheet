@@ -240,6 +240,8 @@ body.view-settings .screen-settings { display: flex; }
 }
 .tool.pin { margin-left: auto; }
 .tool.on { color: var(--yellow); border-color: rgba(255,214,10,.45); background: var(--yellow-soft); }
+.tool.del { color: var(--dim); }
+.tool.del:hover, .tool.del:active { color: var(--yellow); border-color: rgba(255,214,10,.45); }
 
 .qlist li.empty, .tasks li.empty {
   font-size: 13px; color: var(--dim);
@@ -341,8 +343,9 @@ input[type="color"] { min-height: 42px; padding: 3px; width: 56px; flex: 0 0 56p
   font-size: 15px; letter-spacing: 0; text-transform: none; color: var(--ink);
   min-height: 44px;
 }
-.colorfield { display: flex; gap: 8px; }
-.colorfield input[type="text"] { flex: 1 1 auto; }
+.colorfield { display: flex; flex-wrap: wrap; gap: 8px; }
+.colorfield input[type="text"] { flex: 1 1 96px; min-width: 0; }
+.colorfield input.design { flex: 1 1 150px; }
 
 /* ---------- work card ---------- */
 
@@ -642,4 +645,21 @@ input[type="color"] { min-height: 42px; padding: 3px; width: 56px; flex: 0 0 56p
   body { display: block !important; overflow: visible; background: #fff; color: #000; }
   .screen, .bar, .no-print, #screenList, #screenDetail { display: none !important; }
   .print-only { display: block !important; }
+  /* the brand band: PLYMR is yellow on clear and Crafter's Gallery is white,
+     so both only read on black — on bare white paper they vanish */
+  .p-brand {
+    display: flex; align-items: center; gap: 16px;
+    background: #000; color: #ffd60a;
+    padding: 9px 14px; margin: 0 0 16px;
+    -webkit-print-color-adjust: exact; print-color-adjust: exact;
+  }
+  .p-brand img { display: block; height: 26px; width: auto; }
+  .p-brand img.cg { height: 21px; }
+  .p-brand-sep { width: 1px; height: 26px; background: #3a3a3a; }
+  .p-brand-tag {
+    margin-left: auto; font-size: 9pt; font-weight: 700;
+    letter-spacing: .16em; text-transform: uppercase;
+  }
+  /* the design note under a colour, kept quiet so it reads as a footnote */
+  .p-design { font-style: normal; color: #444; font-size: 9pt; }
 }

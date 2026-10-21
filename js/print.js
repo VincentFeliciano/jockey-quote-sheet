@@ -14,7 +14,7 @@ QS.printDoc = (function () {
     return esc(s).replace(/\n/g, '<br>');
   }
 
-  function swatch(hex, name) {
+  function swatch(hex, name, design) {
     var chip = '';
     if (/^#[0-9a-f]{6}$/i.test(hex || '')) {
       chip = '<i style="display:inline-block;width:9pt;height:9pt;border:.5pt solid #999;' +
@@ -22,7 +22,8 @@ QS.printDoc = (function () {
              '-webkit-print-color-adjust:exact;print-color-adjust:exact"></i>';
     }
     var label = esc(name || '') || (hex ? esc(hex) : '—');
-    return label + chip;
+    var note = design ? '<br><em class="p-design">' + esc(design) + '</em>' : '';
+    return label + chip + note;
   }
 
   function specRow(label, valueHtml) {
@@ -37,6 +38,12 @@ QS.printDoc = (function () {
     var out = [];
 
     /* header */
+    out.push('<div class="p-brand">');
+    out.push('<img class="plymr" src="icons/plymr.png" alt="PLYMR">');
+    out.push('<span class="p-brand-sep"></span>');
+    out.push('<img class="cg" src="icons/cg.svg" alt="Crafter\u2019s Gallery">');
+    out.push('<span class="p-brand-tag">Quote for Crafter\u2019s Gallery</span>');
+    out.push('</div>');
     out.push('<div class="p-head">');
     out.push('<div><h1>Quote</h1></div>');
     out.push('<div class="p-meta">');
@@ -67,23 +74,23 @@ QS.printDoc = (function () {
     }
 
     paintBlock('Hat', [
-      specRow('Front panel', swatch(p.hat.front, p.hat.frontName)),
-      specRow('Left side', swatch(p.hat.left, p.hat.leftName)),
-      specRow('Right side', swatch(p.hat.right, p.hat.rightName)),
-      specRow('Back panel', swatch(p.hat.back, p.hat.backName)),
-      specRow('Bill', swatch(p.hat.bill, p.hat.billName))
+      specRow('Front panel', swatch(p.hat.front, p.hat.frontName, p.hat.frontDesign)),
+      specRow('Left side', swatch(p.hat.left, p.hat.leftName, p.hat.leftDesign)),
+      specRow('Right side', swatch(p.hat.right, p.hat.rightName, p.hat.rightDesign)),
+      specRow('Back panel', swatch(p.hat.back, p.hat.backName, p.hat.backDesign)),
+      specRow('Bill', swatch(p.hat.bill, p.hat.billName, p.hat.billDesign))
     ]);
 
     paintBlock('Jockey', [
-      specRow('Eyes', swatch(p.figure.eyes, p.figure.eyesName)),
-      specRow('Hair', swatch(p.figure.hair, p.figure.hairName)),
-      specRow('Body', swatch(p.figure.body, p.figure.bodyName)),
-      specRow('Sleeves', swatch(p.figure.sleeves, p.figure.sleevesName)),
-      specRow('Cuffs', swatch(p.figure.cuffs, p.figure.cuffsName)),
-      specRow('Buttons', swatch(p.figure.buttons, p.figure.buttonsName)),
-      specRow('Pants', swatch(p.figure.pants, p.figure.pantsName)),
-      specRow('Boots', swatch(p.figure.boots, p.figure.bootsName)),
-      specRow('Boot cuffs', swatch(p.figure.bootCuffs, p.figure.bootCuffsName)),
+      specRow('Eyes', swatch(p.figure.eyes, p.figure.eyesName, p.figure.eyesDesign)),
+      specRow('Hair', swatch(p.figure.hair, p.figure.hairName, p.figure.hairDesign)),
+      specRow('Body', swatch(p.figure.body, p.figure.bodyName, p.figure.bodyDesign)),
+      specRow('Sleeves', swatch(p.figure.sleeves, p.figure.sleevesName, p.figure.sleevesDesign)),
+      specRow('Cuffs', swatch(p.figure.cuffs, p.figure.cuffsName, p.figure.cuffsDesign)),
+      specRow('Buttons', swatch(p.figure.buttons, p.figure.buttonsName, p.figure.buttonsDesign)),
+      specRow('Pants', swatch(p.figure.pants, p.figure.pantsName, p.figure.pantsDesign)),
+      specRow('Boots', swatch(p.figure.boots, p.figure.bootsName, p.figure.bootsDesign)),
+      specRow('Boot cuffs', swatch(p.figure.bootCuffs, p.figure.bootCuffsName, p.figure.bootCuffsDesign)),
       (p.chestLogo || p.chestText)
         ? specRow('Chest logo', esc(p.chestText) || 'Yes') : '',
       (p.backArt || p.backText)
@@ -91,8 +98,8 @@ QS.printDoc = (function () {
     ]);
 
     paintBlock('Platform & base', [
-      specRow('Platform', swatch(p.base.platform, p.base.platformName)),
-      specRow('Base', swatch(p.base.base, p.base.baseName)),
+      specRow('Platform', swatch(p.base.platform, p.base.platformName, p.base.platformDesign)),
+      specRow('Base', swatch(p.base.base, p.base.baseName, p.base.baseDesign)),
       specRow('Base front text', esc(p.base.frontText)),
       specRow('Base back text', esc(p.base.backText))
     ]);

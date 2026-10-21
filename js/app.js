@@ -146,6 +146,77 @@
     renderList();
   }
 
+  /* ---------- delete ----------
+     A quote typed against the wrong jockey has to go, and it has to stay
+     gone: the repo still holds the old record until the next push rewrites
+     it, so the id is remembered as deleted and the pull ignores it. */
+
+  var pendingDelete = null;
+
+  function nameOf(q) {
+    return (q && q.job && q.job.jockey) ? q.job.jockey : 'this quote';
+  }
+
+  function askDelete(id) {
+    pendingDelete = id;
+    var q = (state.all || []).filter(function (x) { return x.id === id; })[0];
+    var name = nameOf(q);
+    var m = $('deleteModal');
+    if (!m) {
+      if (window.confirm('Delete ' + name + '?')) doDelete();
+      return;
+    }
+    var line = $('deleteModalNote');
+    if (line) {
+      line.textContent = 'Delete ' + name + '? It comes off this phone and out of the repo. ' +
+        'There is no undo.';
+    }
+    m.hidden = false;
+    m.classList.add('on');
+  }
+
+  function closeDelete() {
+    var m = $('deleteModal');
+    if (m) { m.classList.remove('on'); m.hidden = true; }
+    pendingDelete = null;
+  }
+
+  async function doDelete() {
+    var id = pendingDelete;
+    var q = (state.all || []).filter(function (x) { return x.id === id; })[0];
+    var name = nameOf(q);
+    closeDelete();
+    if (!id) return;
+    try {
+      await QS.store.deletePhotosFor(id);
+      await QS.store.deleteQuote(id);
+      if (QS.sync.rememberDeleted) await QS.sync.rememberDeleted(id);
+      state.all = await QS.store.listQuotes();
+
+      if (state.quote && state.quote.id === id) {
+        if (state.all.length) await openDetail(state.all[0].id);
+        else await newQuote();
+      } else {
+        renderList();
+      }
+      note('Deleted ' + name);
+
+      if (QS.sync.isConfigured()) {
+        try {
+          note('Removing it from the repo…', true);
+          await QS.sync.push(function (m) { note(m, true); });
+          renderSyncState();
+          note('Deleted ' + name + ' — gone from the repo too');
+        } catch (e) {
+          renderSyncState(e);
+          note('Deleted here, but the repo push failed — ' + ((e && e.message) || 'unknown error'), true);
+        }
+      }
+    } catch (e) {
+      note('Could not delete — ' + ((e && e.message) || 'unknown error'), true);
+    }
+  }
+
   async function pushNow() {
     await saveNow();
     if (!QS.sync.isConfigured()) {
@@ -367,6 +438,11 @@
     });
     tick.addEventListener('click', function (e) { e.stopPropagation(); toggleComplete(x); });
 
+    var del = el('button', {
+      class: 'tool del', type: 'button', title: 'Delete this quote', text: '×'
+    });
+    del.addEventListener('click', function (e) { e.stopPropagation(); askDelete(x.id); });
+
     row3.appendChild(el('span', { class: 'stage ' + (x.stage || 'quote'), text: QS.stageLabel(x.stage) }));
 
     if (stats.total) {
@@ -380,6 +456,7 @@
 
     row3.appendChild(pin);
     row3.appendChild(tick);
+    row3.appendChild(del);
 
     li.appendChild(row1);
     li.appendChild(row2);
@@ -851,6 +928,13 @@
     $('saveModal').addEventListener('click', function (e) {
       if (e.target === this) hideSaved();
     });
+    if ($('btnDeleteYes')) $('btnDeleteYes').addEventListener('click', doDelete);
+    if ($('btnDeleteNo')) $('btnDeleteNo').addEventListener('click', closeDelete);
+    if ($('deleteModal')) {
+      $('deleteModal').addEventListener('click', function (e) {
+        if (e.target === this) closeDelete();
+      });
+    }
     $('btnSaveAll').addEventListener('click', pushNow);
     $('btnSettings').addEventListener('click', openSettings);
     $('btnSettingsBack').addEventListener('click', function () {
@@ -957,6 +1041,7 @@
     /* shortcuts */
     document.addEventListener('keydown', function (e) {
       if (e.key === 'Escape' && $('saveModal').classList.contains('on')) { hideSaved(); return; }
+      if (e.key === 'Escape' && $('deleteModal') && $('deleteModal').classList.contains('on')) { closeDelete(); return; }
       if (!(e.ctrlKey || e.metaKey)) return;
       if (e.key === 's') { e.preventDefault(); pushNow(); }
       if (e.key === 'p') { e.preventDefault(); printNow(); }

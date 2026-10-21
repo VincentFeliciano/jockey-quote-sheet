@@ -39,6 +39,13 @@ QS.ui = (function () {
       nameIn.addEventListener('input', function () { onInput(f.k + 'Name', nameIn.value); });
       wrap.appendChild(picker);
       wrap.appendChild(nameIn);
+      if (f.design) {
+        var designIn = el('input', { type: 'text', class: 'design', 'data-k': f.k + 'Design',
+          placeholder: 'design — e.g. checkers on the sleeves' });
+        designIn.value = QS.getPath(quote, f.k + 'Design') || '';
+        designIn.addEventListener('input', function () { onInput(f.k + 'Design', designIn.value); });
+        wrap.appendChild(designIn);
+      }
       return wrap;
     }
 

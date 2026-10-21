@@ -22,6 +22,7 @@ QS.sync = (function () {
   var META_PHOTO_SHA = 'syncPhotoSha';
   var META_IDS = 'syncPhotoIds';
   var META_AT = 'syncAt';
+  var META_DELETED = 'syncDeletedIds';
 
   var DEFAULTS = {
     owner: 'VincentFeliciano',
@@ -276,6 +277,17 @@ QS.sync = (function () {
     return order.map(function (id) { return byId[id]; });
   }
 
+  async function rememberDeleted(id) {
+    if (!id) return;
+    var ids = (await QS.store.getMeta(META_DELETED)) || [];
+    if (ids.indexOf(id) === -1) ids.push(id);
+    await QS.store.setMeta(META_DELETED, ids);
+  }
+
+  async function deletedIds() {
+    return (await QS.store.getMeta(META_DELETED)) || [];
+  }
+
   /* Pull remote records into the local store, newest wins per quote id. */
   async function absorb(onNote) {
     await QS.store.open();
@@ -284,7 +296,10 @@ QS.sync = (function () {
 
     var rq = await getFile(QUOTES_PATH);
     var rp = await getFile(PHOTOS_PATH);
-    var remoteQuotes = rq ? parseQuotes(rq.text) : [];
+    var gone = await deletedIds();
+    var remoteQuotes = (rq ? parseQuotes(rq.text) : []).filter(function (q) {
+      return q && gone.indexOf(q.id) === -1;
+    });
     var remotePhotos = rp ? parsePhotos(rp.text) : [];
 
     var merged = mergeQuotes(local, remoteQuotes);
@@ -426,6 +441,7 @@ QS.sync = (function () {
     testConnection: testConnection,
     pull: pull,
     push: push,
+    rememberDeleted: rememberDeleted,
     lastSync: lastSync,
     busy: function () { return busy; }
   };

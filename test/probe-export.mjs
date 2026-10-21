@@ -96,6 +96,7 @@ const png = await evalJs(`(async function(){
   var qs = await QS.store.listQuotes();
   var q = QS.ensureShape(qs[0]);
   window.__restoreSeen = JSON.stringify(q.restore);
+  if (QS.exportDoc.brandReady) await QS.exportDoc.brandReady();
   var out = QS.exportDoc.png(q);
   var b = new Uint8Array(await out.blob.arrayBuffer());
   var s = ''; for (var i = 0; i < b.length; i++) s += String.fromCharCode(b[i]);

@@ -14,6 +14,38 @@ QS.exportDoc = (function () {
   var LINE = '#dcdcdc';
   var YELLOW = '#ffd60a';
   var FONT = 'Helvetica, Arial, system-ui, sans-serif';
+  var BRAND = 78;          /* the black band across the top of every page */
+
+  /* The marks: PLYMR is yellow on clear and Crafter's Gallery is white, so
+     neither reads on white paper — they live on a black band. Both are loaded
+     once at startup; if they are not in yet the band is drawn plain rather
+     than holding up an export. */
+  var marks = { plymr: null, cg: null };
+  var loading = 0;
+  var waiters = [];
+
+  function loadMark(key, src) {
+    var im;
+    try { im = new Image(); } catch (e) { return; }   /* no Image in a shim */
+    loading++;
+    function settled() {
+      if (im.naturalWidth && im.naturalHeight) marks[key] = im;
+      loading--;
+      if (!loading) waiters.splice(0).forEach(function (f) { f(); });
+    }
+    im.onload = settled;
+    im.onerror = settled;
+    im.src = src;
+  }
+
+  loadMark('plymr', 'icons/plymr.png');
+  loadMark('cg', 'icons/cg.svg');
+
+  /* resolves once both marks have loaded (or failed) */
+  function brandReady() {
+    if (!loading) return Promise.resolve();
+    return new Promise(function (res) { waiters.push(res); });
+  }
 
   function font(ctx, weight, size) {
     ctx.font = weight + ' ' + size + 'px ' + FONT;
@@ -56,6 +88,43 @@ QS.exportDoc = (function () {
 
   function doc() { return { pages: [], ctx: null, y: 0 }; }
 
+  function brandBand(ctx) {
+    ctx.fillStyle = '#000000';
+    ctx.fillRect(0, 0, W, BRAND);
+    ctx.fillStyle = YELLOW;
+    ctx.fillRect(0, BRAND - 3, W, 3);
+
+    var mid = BRAND / 2;
+    var x = M;
+
+    var p = marks.plymr;
+    if (p) {
+      var ph = 30;
+      var pw = ph * (p.naturalWidth / p.naturalHeight);
+      ctx.drawImage(p, x, mid - ph / 2, pw, ph);
+      x += pw + 22;
+    }
+
+    ctx.fillStyle = '#3a3a3a';
+    ctx.fillRect(x, mid - 17, 1.5, 34);
+    x += 23;
+
+    var g = marks.cg;
+    if (g) {
+      var gh = 26;
+      var gw = gh * (g.naturalWidth / g.naturalHeight);
+      ctx.drawImage(g, x, mid - gh / 2, gw, gh);
+    }
+
+    /* what the sheet is, said in the brand's own voice */
+    var strap = 'QUOTE FOR CRAFTER\u2019S GALLERY';
+    font(ctx, '700', 17);
+    ctx.fillStyle = YELLOW;
+    var sw = 0;
+    for (var i = 0; i < strap.length; i++) sw += ctx.measureText(strap.charAt(i)).width + 2.6;
+    spaced(ctx, strap, W - M - sw, mid + 6, 2.6);
+  }
+
   function page(d) {
     var c = document.createElement('canvas');
     c.width = W;
@@ -65,11 +134,12 @@ QS.exportDoc = (function () {
     ctx.fillRect(0, 0, W, H);
     ctx.textBaseline = 'alphabetic';
     ctx.textAlign = 'left';
+    brandBand(ctx);
     d.pages.push(c);
     d.ctx = ctx;
     /* continuation pages start below the running header, so nothing collides
        with it */
-    d.y = d.pages.length > 1 ? M + 48 : M;
+    d.y = d.pages.length > 1 ? BRAND + 70 : BRAND + 20;
   }
 
   function room(d, h) {
@@ -114,7 +184,7 @@ QS.exportDoc = (function () {
     d.y += 46;
   }
 
-  function row(d, label, value, hex, badge) {
+  function row(d, label, value, hex, badge, design) {
     var ctx = d.ctx;
     var right = W - M;
     var text = value || '';
@@ -151,19 +221,33 @@ QS.exportDoc = (function () {
       ctx.textAlign = 'left';
     }
 
+    /* The design note sits under its colour, in the same quiet grey the
+       labels use, so the sheet still reads as a list of parts. */
+    var extra = 0;
+    if (design) {
+      var lines = wrap(ctx, design, CW - 8).slice(0, 2);
+      font(ctx, '400', 16);
+      ctx.fillStyle = MID;
+      lines.forEach(function (ln, i) {
+        ctx.fillText(ln, M, d.y + 46 + i * 19);
+      });
+      extra = 22 + lines.length * 19;
+    }
+
     ctx.fillStyle = LINE;
-    ctx.fillRect(M, d.y + 38, CW, 1);
-    d.y += 46;
+    ctx.fillRect(M, d.y + 38 + extra, CW, 1);
+    d.y += 46 + extra;
   }
 
   function specBlock(d, title, rows) {
     rows = rows.filter(function (r) { return r && (r.value || r.hex); });
     if (!rows.length) return;
-    room(d, 60 + rows.length * 46);
+    var tall = rows.reduce(function (n, r) { return n + (r.design ? 44 : 0); }, 0);
+    room(d, 60 + rows.length * 46 + tall);
     sectionTitle(d, title);
     rows.forEach(function (r) {
-      room(d, 46);
-      row(d, r.label, r.value, r.hex, r.badge);
+      room(d, 46 + (r.design ? 44 : 0));
+      row(d, r.label, r.value, r.hex, r.badge, r.design);
     });
     d.y += 16;
   }
@@ -181,30 +265,30 @@ QS.exportDoc = (function () {
     var p = QS.fillPaint(q.paint);
 
     specBlock(d, 'Hat', [
-      { label: 'Front panel', value: p.hat.frontName || p.hat.front, hex: p.hat.front },
-      { label: 'Left side', value: p.hat.leftName || p.hat.left, hex: p.hat.left },
-      { label: 'Right side', value: p.hat.rightName || p.hat.right, hex: p.hat.right },
-      { label: 'Back panel', value: p.hat.backName || p.hat.back, hex: p.hat.back },
-      { label: 'Bill', value: p.hat.billName || p.hat.bill, hex: p.hat.bill }
+      { label: 'Front panel', value: p.hat.frontName || p.hat.front, hex: p.hat.front, design: p.hat.frontDesign },
+      { label: 'Left side', value: p.hat.leftName || p.hat.left, hex: p.hat.left, design: p.hat.leftDesign },
+      { label: 'Right side', value: p.hat.rightName || p.hat.right, hex: p.hat.right, design: p.hat.rightDesign },
+      { label: 'Back panel', value: p.hat.backName || p.hat.back, hex: p.hat.back, design: p.hat.backDesign },
+      { label: 'Bill', value: p.hat.billName || p.hat.bill, hex: p.hat.bill, design: p.hat.billDesign }
     ]);
 
     specBlock(d, 'Jockey', [
-      { label: 'Eyes', value: p.figure.eyesName || p.figure.eyes, hex: p.figure.eyes },
-      { label: 'Hair', value: p.figure.hairName || p.figure.hair, hex: p.figure.hair },
-      { label: 'Body', value: p.figure.bodyName || p.figure.body, hex: p.figure.body },
-      { label: 'Sleeves', value: p.figure.sleevesName || p.figure.sleeves, hex: p.figure.sleeves },
-      { label: 'Cuffs', value: p.figure.cuffsName || p.figure.cuffs, hex: p.figure.cuffs },
-      { label: 'Buttons', value: p.figure.buttonsName || p.figure.buttons, hex: p.figure.buttons },
-      { label: 'Pants', value: p.figure.pantsName || p.figure.pants, hex: p.figure.pants },
-      { label: 'Boots', value: p.figure.bootsName || p.figure.boots, hex: p.figure.boots },
-      { label: 'Boot cuffs', value: p.figure.bootCuffsName || p.figure.bootCuffs, hex: p.figure.bootCuffs },
+      { label: 'Eyes', value: p.figure.eyesName || p.figure.eyes, hex: p.figure.eyes, design: p.figure.eyesDesign },
+      { label: 'Hair', value: p.figure.hairName || p.figure.hair, hex: p.figure.hair, design: p.figure.hairDesign },
+      { label: 'Body', value: p.figure.bodyName || p.figure.body, hex: p.figure.body, design: p.figure.bodyDesign },
+      { label: 'Sleeves', value: p.figure.sleevesName || p.figure.sleeves, hex: p.figure.sleeves, design: p.figure.sleevesDesign },
+      { label: 'Cuffs', value: p.figure.cuffsName || p.figure.cuffs, hex: p.figure.cuffs, design: p.figure.cuffsDesign },
+      { label: 'Buttons', value: p.figure.buttonsName || p.figure.buttons, hex: p.figure.buttons, design: p.figure.buttonsDesign },
+      { label: 'Pants', value: p.figure.pantsName || p.figure.pants, hex: p.figure.pants, design: p.figure.pantsDesign },
+      { label: 'Boots', value: p.figure.bootsName || p.figure.boots, hex: p.figure.boots, design: p.figure.bootsDesign },
+      { label: 'Boot cuffs', value: p.figure.bootCuffsName || p.figure.bootCuffs, hex: p.figure.bootCuffs, design: p.figure.bootCuffsDesign },
       { label: 'Chest logo', value: (p.chestLogo || p.chestText) ? (p.chestText || 'Yes') : '' },
       { label: 'Back artwork', value: (p.backArt || p.backText) ? (p.backText || 'Yes') : '' }
     ]);
 
     specBlock(d, 'Platform & base', [
-      { label: 'Platform', value: p.base.platformName || p.base.platform, hex: p.base.platform },
-      { label: 'Base', value: p.base.baseName || p.base.base, hex: p.base.base },
+      { label: 'Platform', value: p.base.platformName || p.base.platform, hex: p.base.platform, design: p.base.platformDesign },
+      { label: 'Base', value: p.base.baseName || p.base.base, hex: p.base.base, design: p.base.baseDesign },
       { label: 'Base front text', value: p.base.frontText },
       { label: 'Base back text', value: p.base.backText }
     ]);
@@ -343,18 +427,18 @@ QS.exportDoc = (function () {
       if (i > 0) {
         font(ctx, '700', 17);
         ctx.fillStyle = MUTED;
-        spaced(ctx, 'QUOTE', M, 74, 2.2);
+        spaced(ctx, 'QUOTE', M, BRAND + 34, 2.2);
         font(ctx, '400', 16);
         ctx.fillStyle = MUTED;
         ctx.textAlign = 'right';
         ctx.fillText((q.number || 'Quote') +
           (q.job && q.job.jockey ? ' \u00b7 ' + q.job.jockey : '') +
-          ' \u00b7 continued', W - M, 74);
+          ' \u00b7 continued', W - M, BRAND + 34);
         ctx.textAlign = 'left';
         ctx.fillStyle = YELLOW;
-        ctx.fillRect(M, 86, 46, 3);
+        ctx.fillRect(M, BRAND + 46, 46, 3);
         ctx.fillStyle = LINE;
-        ctx.fillRect(M + 54, 87, CW - 54, 1.5);
+        ctx.fillRect(M + 54, BRAND + 47, CW - 54, 1.5);
       }
 
       var y = H - 52;
@@ -514,5 +598,5 @@ QS.exportDoc = (function () {
     return Promise.resolve({ shared: false, downloaded: true, name: out.name, pages: out.pages });
   }
 
-  return { render: render, png: png, pdf: pdf, share: share, download: download };
+  return { render: render, png: png, pdf: pdf, share: share, download: download, brandReady: brandReady };
 })();
