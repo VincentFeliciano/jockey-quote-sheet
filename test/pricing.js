@@ -24,7 +24,7 @@ ok('simple is 150', Q.paintTier('simple').price === 150);
 ok('standard is 175', Q.paintTier('standard').price === 175);
 ok('complex is 200', Q.paintTier('complex').price === 200);
 ok('decal is 10', Q.DECAL_PRICE === 10);
-ok('delivery is 50', Q.DELIVERY_FEE === 50);
+ok('delivery is 25', Q.DELIVERY_FEE === 25);
 
 /* ---------- the sheet's shape: piece only, no customer, no extras ---------- */
 const first = Q.SECTIONS[0];
@@ -58,16 +58,16 @@ ok('3 decals add 30', t.decals === 30 && t.total === 205, 'got ' + t.total);
 
 q.pricing.delivery = true;
 t = Q.totals(q);
-ok('delivery adds 50', t.delivery === 50 && t.total === 255, 'got ' + t.total);
+ok('delivery adds 25', t.delivery === 25 && t.total === 230, 'got ' + t.total);
 
 q.pricing.paintTier = 'complex';
 q.pricing.decals = 2;
 t = Q.totals(q);
-ok('complex+2 decals+delivery = 270', t.total === 270, 'got ' + t.total);
+ok('complex+2 decals+delivery = 245', t.total === 245, 'got ' + t.total);
 
 q.discount = 45;
 t = Q.totals(q);
-ok('discount off the total = 225', t.total === 225, 'got ' + t.total);
+ok('discount off the total = 200', t.total === 200, 'got ' + t.total);
 
 /* ---------- restoration ---------- */
 ok('strip is 150', Q.RESTORE_STRIP === 150);

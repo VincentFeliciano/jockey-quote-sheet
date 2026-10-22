@@ -137,7 +137,7 @@ QS.hasRestore = function (q) {
 
    The paint job is the only thing whose price really moves: the more
    detail in the paint, the more it costs. Decals are flat-rate each,
-   wherever they land, and delivery is a flat fee. */
+   wherever they land, and delivery is a flat fee per jockey. */
 
 QS.PAINT_TIERS = [
   { id: 'simple',   label: 'Simple',   price: 150, hint: 'One or two colours, clean lines' },
@@ -146,7 +146,7 @@ QS.PAINT_TIERS = [
 ];
 
 QS.DECAL_PRICE = 10;    /* each, front, back or bottom */
-QS.DELIVERY_FEE = 50;
+QS.DELIVERY_FEE = 25;   /* per jockey — one sheet, one jockey */
 
 QS.PRICING_DEFAULTS = {
   paintTier: 'standard',

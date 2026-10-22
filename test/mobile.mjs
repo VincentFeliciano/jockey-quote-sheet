@@ -167,7 +167,7 @@ await check('tier names and prices', "(function(){var t=[];document.querySelecto
 await check('standard selected by default', "document.querySelector('#tierRow .tier.on .tier-label').textContent", 'Standard');
 await check('decal count starts at zero', "document.getElementById('decalCount').textContent", '0');
 await check('decal rate shown', "document.getElementById('decalRate').textContent", '$10.00 each');
-await check('delivery rate shown', "document.getElementById('deliveryRate').textContent", '$50.00');
+await check('delivery rate shown', "document.getElementById('deliveryRate').textContent", '$25.00');
 await check('delivery off by default', "document.getElementById('delivery').checked", false);
 await check('paint line shows the tier price', "document.getElementById('pPaint').textContent", '$175.00');
 
@@ -201,8 +201,8 @@ await check('decals never go negative', "document.getElementById('decalCount').t
 await evalJs(`document.getElementById('delivery').click()`);
 await sleep(300);
 await check('delivery switches on', "document.getElementById('delivery').checked", true);
-await check('delivery line shows the fee', "document.getElementById('pDelivery').textContent", '$50.00');
-await check('total includes delivery', "document.getElementById('tTotal').textContent", '$250.00');
+await check('delivery line shows the fee', "document.getElementById('pDelivery').textContent", '$25.00');
+await check('total includes delivery', "document.getElementById('tTotal').textContent", '$225.00');
 
 /* restoration — strip and resurface are separate charges */
 await evalJs(`document.querySelector('#sections label[data-k="restore.concrete"] input').click()`);
@@ -215,19 +215,19 @@ await check('strip switches on',
   "document.querySelector('#sections label[data-k=\"restore.strip\"] input').checked", true);
 await check('strip line appears', "document.getElementById('rowStrip').hidden", false);
 await check('strip costs 150', "document.getElementById('pStrip').textContent", '$150.00');
-await check('total includes the strip', "document.getElementById('tTotal').textContent", '$400.00');
+await check('total includes the strip', "document.getElementById('tTotal').textContent", '$375.00');
 
 await evalJs(`document.querySelector('#sections label[data-k="restore.resurface"] input').click()`);
 await sleep(300);
 await check('resurface line appears', "document.getElementById('rowSurface').hidden", false);
 await check('resurface costs 100', "document.getElementById('pSurface').textContent", '$100.00');
-await check('total includes both', "document.getElementById('tTotal').textContent", '$500.00');
+await check('total includes both', "document.getElementById('tTotal').textContent", '$475.00');
 
 /* turning the strip back off takes its money away again */
 await evalJs(`document.querySelector('#sections label[data-k="restore.strip"] input').click()`);
 await sleep(300);
 await check('strip line hides again', "document.getElementById('rowStrip').hidden", true);
-await check('total drops the strip', "document.getElementById('tTotal').textContent", '$350.00');
+await check('total drops the strip', "document.getElementById('tTotal').textContent", '$325.00');
 await evalJs(`document.querySelector('#sections label[data-k="restore.strip"] input').click()`);
 await sleep(250);
 
