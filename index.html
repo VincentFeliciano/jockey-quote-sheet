@@ -199,7 +199,7 @@
           <button id="btnSendPdf" class="btn small" type="button">Send PDF</button>
           <button id="btnPrint" class="btn small" type="button">Print</button>
         </div>
-        <p class="fine">Saved on this phone as you type. <strong>Save</strong> writes it to the repo, which is the master copy.</p>
+        <p class="fine">Saved on this phone as you type. <strong>Save</strong> keeps a copy here; <strong>Save a file</strong> writes one you can move.</p>
       </section>
 
       <div class="bottom-space"></div>
@@ -213,41 +213,24 @@
     <button id="btnSettingsBack" class="btn icon" type="button" aria-label="Back to list">&#8592;</button>
     <div class="detail-title">
       <strong>Settings</strong>
-      <span class="qno">repo &amp; backup</span>
+      <span class="qno">save &amp; load</span>
     </div>
   </header>
 
   <div class="scroller" id="settingsScroll">
     <div class="pad">
 
-      <section id="syncBox" class="card sync-card">
-        <h2>Repo sync</h2>
-        <p class="fine">Save pushes the sheet to GitHub and opening the app reads it back, so the repo is the master copy. Needs a fine-grained token with <strong>Contents: read &amp; write</strong> on this one repo. It stays on this phone.</p>
-        <label class="sync-row">Owner <input id="syncOwner" type="text" autocomplete="off" spellcheck="false"></label>
-        <label class="sync-row">Repo <input id="syncRepo" type="text" autocomplete="off" spellcheck="false"></label>
-        <label class="sync-row">Branch <input id="syncBranch" type="text" autocomplete="off" spellcheck="false"></label>
-        <label class="sync-row">Token <input id="syncToken" type="password" autocomplete="off" spellcheck="false" placeholder="github_pat_&hellip;"></label>
-        <button id="btnSyncPaste" class="btn small" type="button">Paste token from clipboard</button>
-        <div class="list-tools">
-          <button id="btnSyncSave" class="btn primary small" type="button">Save settings</button>
-          <button id="btnSyncTest" class="btn small" type="button">Test connection</button>
-          <button id="btnSyncPull" class="btn small" type="button">Pull now</button>
-          <button id="btnSyncForget" class="btn small" type="button">Forget token</button>
-        </div>
-        <div id="syncState" class="fine"></div>
-      </section>
-
       <section class="card">
-        <h2>Backup</h2>
+        <h2>Save &amp; load</h2>
         <div class="list-tools">
-          <button id="btnDownload" class="btn small" type="button">Download a copy</button>
-          <button id="btnImport" class="btn small" type="button">Restore file</button>
+          <button id="btnDownload" class="btn small" type="button">Save a file</button>
+          <button id="btnImport" class="btn small" type="button">Load a file</button>
         </div>
         <input type="file" id="importFile" accept="application/json,.json" hidden>
-        <p class="fine">A file copy of everything on this phone, photos included. Not needed for day-to-day — the repo holds the master copy.</p>
+        <p class="fine">One file with every quote and its photos. Keep it in Files or email it to yourself; <strong>Load a file</strong> puts it back on a new phone.</p>
       </section>
 
-      <div class="list-foot"><span id="settingsNote">Repo and backup</span></div>
+      <div class="list-foot"><span id="settingsNote">Saved on this phone</span></div>
     </div>
   </div>
 </section>
@@ -256,7 +239,7 @@
   <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="saveModalTitle">
     <div class="tick" aria-hidden="true">&#10003;</div>
     <h2 id="saveModalTitle">Saved</h2>
-    <p id="saveModalNote">On this phone and in the repo.</p>
+    <p id="saveModalNote">Saved on this phone.</p>
     <button id="btnSaveDone" class="btn primary" type="button">Done</button>
   </div>
 </div>
@@ -264,7 +247,7 @@
 <div id="deleteModal" class="modal" hidden>
   <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="deleteModalTitle">
     <h2 id="deleteModalTitle">Delete this quote?</h2>
-    <p id="deleteModalNote">It comes off this phone and out of the repo. There is no undo.</p>
+    <p id="deleteModalNote">It comes off this phone. There is no undo.</p>
     <button id="btnDeleteYes" class="btn primary" type="button">Delete it</button>
     <button id="btnDeleteNo" class="btn" type="button">Keep it</button>
   </div>
@@ -278,7 +261,6 @@
 <script src="js/ui.js"></script>
 <script src="js/print.js"></script>
 <script src="js/export.js"></script>
-<script src="js/sync.js"></script>
 <script src="js/app.js"></script>
 <script>
 /* Offline shell — only over http(s), never from file:// */

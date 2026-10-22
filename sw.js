@@ -1,5 +1,5 @@
 /* Offline shell. The shop has bad signal; the app should still open. */
-var CACHE = 'quote-sheet-v8';
+var CACHE = 'quote-sheet-v9';
 var SHELL = [
   './',
   'index.html',
@@ -10,7 +10,6 @@ var SHELL = [
   'js/ui.js',
   'js/print.js',
   'js/export.js',
-  'js/sync.js',
   'js/app.js',
   'manifest.json',
   'icons/icon-192.png',

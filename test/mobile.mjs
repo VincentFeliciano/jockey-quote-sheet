@@ -335,8 +335,8 @@ await check('row buttons are touch sized',
 await check('list Save button', "document.getElementById('btnSaveAll').textContent.trim()", 'Save');
 await check('only one main action on the list',
   "document.querySelectorAll('.list-tools-main button').length", 1);
-await check('no repo fields on the list screen',
-  "document.querySelectorAll('#screenList input#syncToken').length", 0);
+await check('no sync fields anywhere',
+  "document.querySelectorAll('#syncToken,#syncOwner,#syncRepo,#syncBranch').length", 0);
 await check('settings button is touch sized',
   "Math.round(document.getElementById('btnSettings').getBoundingClientRect().width) >= 44", true);
 
@@ -346,13 +346,9 @@ await sleep(500);
 await check('settings opens', "document.body.classList.contains('view-settings')", true);
 await check('settings screen visible', "getComputedStyle(document.getElementById('screenSettings')).display", 'flex');
 await check('list hidden behind settings', "getComputedStyle(document.getElementById('screenList')).display", 'none');
-await check('token field lives in settings', "!!document.getElementById('syncToken')", true);
-await check('repo defaults', "document.getElementById('syncOwner').value + '/' + document.getElementById('syncRepo').value + '@' + document.getElementById('syncBranch').value",
-  'VincentFeliciano/jockey-quote-sheet@main');
 await check('settings does not spill',
   "(function(){var vw=document.documentElement.clientWidth;var bad=0;document.querySelectorAll('#screenSettings *').forEach(function(n){var r=n.getBoundingClientRect();if(r.width>0&&r.right>vw+0.5)bad++;});return bad;})()", 0);
-await check('settings headings', "(function(){var t=[];document.querySelectorAll('#screenSettings .card h2').forEach(function(h){t.push(h.textContent.trim());});return t.join('|');})()", 'Repo sync|Backup');
-await check('token field is masked', "document.getElementById('syncToken').type", 'password');
+await check('settings headings', "(function(){var t=[];document.querySelectorAll('#screenSettings .card h2').forEach(function(h){t.push(h.textContent.trim());});return t.join('|');})()", 'Save & load');
 await check('backup controls in settings', "!!document.getElementById('btnDownload') && !!document.getElementById('btnImport')", true);
 await evalJs(`document.getElementById('btnSettingsBack').click()`);
 await sleep(500);
@@ -402,8 +398,17 @@ await check('pdf keeps the quote to one page', `(async function(){
 
 /* ---------- save confirmation ---------- */
 await check('save modal hidden at rest', "getComputedStyle(document.getElementById('saveModal')).display", 'none');
-await evalJs(`document.getElementById('btnSaveAll').click()`);
-await sleep(1400);
+
+/* Save is a local save: it writes to this phone and never calls the network. */
+await evalJs(`(function(){ window.__fetchCount = 0; var of = window.fetch;
+  window.fetch = function(){ window.__fetchCount++; return of.apply(this, arguments); }; return true; })()`);
+await check('Save keeps the quote on this phone', `(async function(){
+  document.getElementById('btnSaveAll').click();
+  await new Promise(function(r){ setTimeout(r, 1400); });
+  var qs = await QS.store.listQuotes();
+  return qs.length >= 1 && !!qs[0].id;
+})()`, true);
+await check('Save never touches the network', "window.__fetchCount", 0);
 await check('list Save confirms', "getComputedStyle(document.getElementById('saveModal')).display", 'flex');
 await check('confirmation says Saved', "document.getElementById('saveModalTitle').textContent", 'Saved');
 await check('confirmation says where it went', "/phone|repo/i.test(document.getElementById('saveModalNote').textContent)", true);
@@ -459,21 +464,25 @@ writeFileSync(resolve('test/mobile-settings.png'), Buffer.from(shot3.data, 'base
 await evalJs(`document.getElementById('btnSettingsBack').click()`);
 await sleep(400);
 
-/* ---------- setup link still lands on the token box ---------- */
-/* Tapping the link while the app is open is a hash change, so test it that way. */
-await evalJs("location.hash = '#setup'; true");
-let setupReady = false;
+/* ---------- the update clears what the old version left behind ---------- */
+await evalJs("localStorage.setItem('qs.sync', JSON.stringify({token:'leftover'})); true");
+await send('Page.reload', {});
+let reborn = false;
 for (let i = 0; i < 60; i++) {
   await sleep(250);
   const r = await send('Runtime.evaluate', {
-    expression: "!!(window.QS && document.body && /view-settings/.test(document.body.className))",
+    expression: "!!(window.QS && document.body && document.getElementById('btnSaveAll'))",
     returnByValue: true
   }).catch(() => null);
-  if (r && r.result && r.result.value) { setupReady = true; break; }
+  if (r && r.result && r.result.value) { reborn = true; break; }
 }
-if (setupReady) await sleep(400);
-await check('setup link opens settings', "document.body.classList.contains('view-settings')", true);
-await check('setup link clears itself from the URL', "/setup/.test(location.hash)", false);
+if (!reborn) throw new Error('the app did not come back after a reload');
+await sleep(900);
+await check('the old token is gone', "localStorage.getItem('qs.sync')", null);
+await check('the old sync module is gone', `(async function(){
+  try { var r = await fetch('js/sync.js', {cache:'no-store'}); return r.status; }
+  catch (e) { return 'blocked'; }
+})()`, 404);
 
 /* ---------- overflow sweep ---------- */
 const overflow = await evalJs(`(function(){

@@ -36,8 +36,6 @@
 
   function openSettings() {
     setView('settings');
-    fillSyncFields();
-    renderSyncState();
   }
 
   function openDetail(id) {
@@ -79,49 +77,6 @@
     state.all = await QS.store.listQuotes();
     renderList();
     note('Saved');
-  }
-
-  /* ---------- repo sync ---------- */
-
-  function renderSyncState(err) {
-    var box = $('syncState');
-    if (!box) return;
-    box.classList.toggle('bad', !!err);
-    if (err) { box.textContent = err; return; }
-    if (!QS.sync.isConfigured()) {
-      box.textContent = 'No token — Save keeps this phone only.';
-      return;
-    }
-    var c = QS.sync.cfg();
-    QS.sync.lastSync().then(function (at) {
-      var when = at ? new Date(at).toLocaleString() : 'never';
-      box.textContent = c.owner + '/' + c.repo + ' @ ' + c.branch + ' — last sync ' + when;
-    });
-  }
-
-  function fillSyncFields() {
-    var c = QS.sync.cfg();
-    if ($('syncOwner')) $('syncOwner').value = c.owner;
-    if ($('syncRepo')) $('syncRepo').value = c.repo;
-    if ($('syncBranch')) $('syncBranch').value = c.branch;
-    if ($('syncToken')) $('syncToken').value = c.token;
-  }
-
-  function saveSyncSettings() {
-    var patch = {
-      owner: $('syncOwner').value,
-      repo: $('syncRepo').value,
-      branch: $('syncBranch').value,
-      token: $('syncToken').value
-    };
-    try {
-      QS.sync.saveCfg(patch);
-    } catch (e) {
-      return renderSyncState('Could not store the token on this device.');
-    }
-    fillSyncFields();
-    renderSyncState();
-    note(QS.sync.isConfigured() ? 'Repo linked' : 'No token yet');
   }
 
   /* ---------- save confirmation ---------- */
@@ -190,7 +145,6 @@
     try {
       await QS.store.deletePhotosFor(id);
       await QS.store.deleteQuote(id);
-      if (QS.sync.rememberDeleted) await QS.sync.rememberDeleted(id);
       state.all = await QS.store.listQuotes();
 
       if (state.quote && state.quote.id === id) {
@@ -200,102 +154,16 @@
         renderList();
       }
       note('Deleted ' + name);
-
-      if (QS.sync.isConfigured()) {
-        try {
-          note('Removing it from the repo…', true);
-          await QS.sync.push(function (m) { note(m, true); });
-          renderSyncState();
-          note('Deleted ' + name + ' — gone from the repo too');
-        } catch (e) {
-          renderSyncState(e);
-          note('Deleted here, but the repo push failed — ' + ((e && e.message) || 'unknown error'), true);
-        }
-      }
     } catch (e) {
       note('Could not delete — ' + ((e && e.message) || 'unknown error'), true);
     }
   }
 
-  async function pushNow() {
+  /* Save is a local save: the phone is the only copy. */
+  async function saveAndConfirm() {
     await saveNow();
-    if (!QS.sync.isConfigured()) {
-      note('Saved on phone — no repo token yet');
-      renderSyncState();
-      showSaved('On this phone. No repo token yet.');
-      return;
-    }
-    try {
-      note('Pushing to repo…', true);
-      var r = await QS.sync.push(function (m) { note(m, true); });
-      state.all = await QS.store.listQuotes();
-      renderList();
-      renderSyncState();
-      note('Saved to repo' + (r.uploaded ? ' + ' + r.uploaded + ' photo(s)' : ''));
-      showSaved('In the repo' + (r.uploaded ? ', with ' + r.uploaded + ' photo(s)' : '') + '.');
-    } catch (e) {
-      var why = (e && e.message) ? e.message : 'The push failed.';
-      var code = (e && e.status) ? ' [' + e.status + ']' : '';
-      renderSyncState(why);
-      note('On phone only — push failed', true);
-      showSaved('Saved on this phone only. ' + why + code);
-    }
-  }
-
-  async function testSyncNow() {
-    var box = $('syncState');
-    var btn = $('btnSyncTest');
-    if (!QS.sync.isConfigured()) {
-      renderSyncState('Paste a token and Save settings first.');
-      return;
-    }
-    if (btn) btn.disabled = true;
-    if (box) { box.classList.remove('bad'); box.textContent = 'Testing…'; }
-    try {
-      var r = await QS.sync.testConnection();
-      renderSyncState(r.ok ? null : r.message);
-      if (r.ok) {
-        var at = await QS.sync.lastSync();
-        if (box) {
-          box.classList.remove('bad');
-          box.textContent = r.message + ' Last sync ' +
-            (at ? new Date(at).toLocaleString() : 'never') + '.';
-        }
-        note('Repo reachable');
-      } else {
-        note('Repo check failed — see the note', true);
-      }
-    } catch (e) {
-      renderSyncState(e && e.message ? e.message : 'The check itself failed.');
-    } finally {
-      if (btn) btn.disabled = false;
-    }
-  }
-
-  async function pullNow() {
-    if (!QS.sync.isConfigured()) {
-      renderSyncState('Paste a token first.');
-      return;
-    }
-    try {
-      note('Pulling from repo…', true);
-      var r = await QS.sync.pull(function (m) { note(m, true); });
-      state.all = await QS.store.listQuotes();
-      renderList();
-      if (state.quote) {
-        var fresh = await QS.store.getQuote(state.quote.id);
-        if (fresh && !state.dirty) {
-          state.quote = fresh;
-          state.photos = await QS.store.photosFor(fresh.id);
-          renderAll();
-        }
-      }
-      renderSyncState();
-      note('Pulled ' + r.quotes + ' quote(s)' + (r.downloaded ? ', ' + r.downloaded + ' photo(s)' : ''));
-    } catch (e) {
-      renderSyncState(e.message);
-      note('Pull failed', true);
-    }
+    note('Saved on this phone');
+    showSaved('Saved on this phone.');
   }
 
   /* ---------- totals ---------- */
@@ -792,22 +660,14 @@
     note('New quote ' + q.number);
   }
 
-  /* ---------- setup link ---------- */
-  /* #setup jumps to the repo panel and focuses the token box. Runs at boot AND on
-     hashchange, so tapping the link while the app is already open still works. */
-  function applySetupLink() {
-    if (!/#setup\b/.test(location.hash || '')) return false;
-    openSettings();
-    var tin = $('syncToken');
-    if (tin) setTimeout(function () { try { tin.focus(); } catch (e) {} }, 200);
-    note('Paste the token, then Save settings');
-    try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {}
-    return true;
-  }
-
   /* ---------- boot ---------- */
 
   async function boot() {
+    /* Everything lives on this phone now. Clear what the previous version left
+       behind: the GitHub token and the old sync tombstones. */
+    try { localStorage.removeItem('qs.sync'); } catch (e) {}
+    try { await QS.store.setMeta('syncDeletedIds', []); } catch (e) {}
+
     dom = {
       dTitle: $('dTitle'),
       quoteNo: $('quoteNo'),
@@ -924,7 +784,7 @@
     });
 
     /* buttons */
-    $('btnSave').addEventListener('click', pushNow);
+    $('btnSave').addEventListener('click', saveAndConfirm);
     $('btnPrint').addEventListener('click', printNow);
     $('btnSendImage').addEventListener('click', function () { sendAs('png'); });
     $('btnSendPdf').addEventListener('click', function () { sendAs('pdf'); });
@@ -939,37 +799,13 @@
         if (e.target === this) closeDelete();
       });
     }
-    $('btnSaveAll').addEventListener('click', pushNow);
+    $('btnSaveAll').addEventListener('click', saveAndConfirm);
     $('btnSettings').addEventListener('click', openSettings);
     $('btnSettingsBack').addEventListener('click', function () {
       setView('list');
       renderList();
     });
     $('btnDownload').addEventListener('click', exportBackup);
-    $('btnSyncSave').addEventListener('click', saveSyncSettings);
-    $('btnSyncTest').addEventListener('click', testSyncNow);
-    $('btnSyncPull').addEventListener('click', pullNow);
-    if ($('btnSyncPaste')) {
-      $('btnSyncPaste').addEventListener('click', async function () {
-        var t = $('syncToken');
-        try {
-          var txt = await navigator.clipboard.readText();
-          if (!txt || !txt.trim()) return note('Clipboard is empty');
-          t.value = txt.trim();
-          saveSyncSettings();
-          if (QS.sync.isConfigured()) pullNow();
-        } catch (e) {
-          note('Long-press the token box and paste');
-          try { t.focus(); } catch (e2) {}
-        }
-      });
-    }
-    $('btnSyncForget').addEventListener('click', function () {
-      QS.sync.saveCfg({ token: '' });
-      fillSyncFields();
-      renderSyncState();
-      note('Token removed from this phone');
-    });
     $('btnImport').addEventListener('click', function () { $('importFile').click(); });
     $('importFile').addEventListener('change', function (e) {
       if (e.target.files[0]) importBackup(e.target.files[0]);
@@ -1047,7 +883,7 @@
       if (e.key === 'Escape' && $('saveModal').classList.contains('on')) { hideSaved(); return; }
       if (e.key === 'Escape' && $('deleteModal') && $('deleteModal').classList.contains('on')) { closeDelete(); return; }
       if (!(e.ctrlKey || e.metaKey)) return;
-      if (e.key === 's') { e.preventDefault(); pushNow(); }
+      if (e.key === 's') { e.preventDefault(); saveAndConfirm(); }
       if (e.key === 'p') { e.preventDefault(); printNow(); }
     });
     window.addEventListener('beforeunload', function (e) {
@@ -1083,49 +919,6 @@
     }
 
     note(QS.store.isMemoryOnly() ? 'Storage blocked — take a backup!' : 'Ready', QS.store.isMemoryOnly());
-
-    /* repo sync: fields, status, and a quiet pull so the repo is the master copy */
-    /* one-tap setup link: #sync=owner/repo/branch/token — stored, then scrubbed */
-    var link = /#sync=([^&]+)/.exec(location.hash || '');
-    if (link) {
-      var parts = decodeURIComponent(link[1]).split('/');
-      if (parts.length >= 4) {
-        try {
-          QS.sync.saveCfg({
-            owner: parts[0], repo: parts[1], branch: parts[2],
-            token: parts.slice(3).join('/')
-          });
-          note('Repo linked');
-        } catch (e) { /* storage blocked */ }
-      }
-      try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {}
-    }
-
-    /* setup link: #setup opens the repo panel with the token box ready */
-    applySetupLink();
-
-    fillSyncFields();
-    renderSyncState();
-    if (QS.sync.isConfigured()) {
-      note('Pulling from repo…', true);
-      QS.sync.pull(function (msg) { note(msg, true); }).then(async function (r) {
-        state.all = await QS.store.listQuotes();
-        renderList();
-        if (state.quote && !state.dirty) {
-          var fresh = await QS.store.getQuote(state.quote.id);
-          if (fresh) {
-            state.quote = fresh;
-            state.photos = await QS.store.photosFor(fresh.id);
-            renderAll();
-          }
-        }
-        renderSyncState();
-        note(r.changed ? 'Pulled ' + r.changed + ' change(s)' : 'Up to date');
-      }).catch(function (e) {
-        renderSyncState(e.message);
-        note('Offline — using the phone copy');
-      });
-    }
   }
 
   if (document.readyState === 'loading') {
@@ -1133,9 +926,4 @@
   } else {
     boot();
   }
-
-  /* tapping the setup link while the app is already open only fires hashchange */
-  window.addEventListener('hashchange', function () {
-    if (dom && dom.workList) applySetupLink();
-  });
 })();

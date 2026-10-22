@@ -18,35 +18,22 @@ Same look as the desktop sheet: black, shades of grey, one yellow.
   camera roll, or from anything you saved out of a text or an email. Photos are
   downscaled to 1600px and stored on the device.
 - **Print / PDF** — the whole sheet as a clean document.
-- **Save** — one button that writes to the phone *and* pushes the master copy to
-  GitHub. **Pull from repo** brings down anything changed elsewhere.
-- **Download a copy** — the old backup file, for a belt-and-braces export.
-- **Restore file** — read a backup file back in.
+- **Save** — writes to this phone. Everything is autosaved as you type, so Save is
+  the confirmation, not the moment it is written.
+- **Save a file** — one JSON holding every quote and its photos. Keep it in Files,
+  email it to yourself, put it in a drive.
+- **Load a file** — reads one of those back in.
 
 ## Where the data lives
 
-Two copies, one master:
+One copy: this phone. IndexedDB, no account, no server, no signal required.
 
-| Where | What | Notes |
-| --- | --- | --- |
-| The repo | `data/quotes.json`, `data/photos.json`, `data/photos/*.jpg` | The master copy. Pull reads it; Save writes it. |
-| The phone | IndexedDB | Works with no signal. Autosaves as you type. |
+**Save a file** writes `jockey-quotes-YYYY-MM-DD.json` — every quote and every photo
+in one file. **Load a file** reads it back. Moving to a new phone is those two
+buttons and nothing else.
 
-Photos are committed as separate files, written once and never rewritten, so the
-repo does not grow every time you hit Save — only the small `quotes.json` changes.
-
-**Repo sync setup (once per device).** Open **Repo sync** at the bottom of the list
-screen and paste a GitHub **fine-grained token** with *Contents: Read and write* on
-`VincentFeliciano/jockey-quote-sheet` only. It is kept in `localStorage` on that
-device and nowhere else. Anyone holding the phone can read it, so give it an expiry
-date and revoke it at github.com/settings/personal-access-tokens if the phone goes
-missing.
-
-There is also a one-tap form of the same thing:
-`…/jockey-quote-sheet/#sync=owner/repo/branch/<token>` stores the token and then
-scrubs it from the address bar.
-
-Without a token the app still works — Save just keeps everything on the phone.
+Nothing in this app talks to the network, so there is no token to create, store or
+rotate.
 
 ## Using it on the phone
 
@@ -66,15 +53,10 @@ Without a token the app still works — Save just keeps everything on the phone.
 
 ```
 python -m http.server 8789 --bind 127.0.0.1
-node test/mobile.mjs      # 40 checks at 390x844, writes test/mobile.png + mobile-list.png
-node test/sync.mjs        # 21 checks: real Save push + pull against a throwaway branch
-node test/seed.mjs        # writes the empty data/ files into the repo if missing
+node test/mobile.mjs      # 133 checks at 390x844, writes test/mobile.png + mobile-list.png
+node test/pricing.js      # 45 checks: the price book
 node test/probe.mjs       # dumps element rects for layout inspection
 ```
-
-`test/sync.mjs` reads a token from the git credential helper, creates a `sync-test`
-branch, drives the real Save button in headless Chrome, verifies the commit landed,
-pulls it back into an empty store, then deletes the branch. It never prints the token.
 
 ## Files
 
@@ -86,9 +68,7 @@ js/store.js     IndexedDB persistence with an in-memory fallback
 js/photos.js    camera/photo intake, downscaling
 js/ui.js        DOM rendering
 js/print.js     the printable document
-js/sync.js      Save/Pull against the GitHub repo
 js/app.js       wiring, autosave, navigation
-data/           the master copy: quotes.json, photos.json, photos/
 sw.js           offline shell
 manifest.json   installable app metadata
 ```
