@@ -641,25 +641,123 @@ input[type="color"] { min-height: 42px; padding: 3px; width: 56px; flex: 0 0 56p
 
 .print-only { display: none; }
 
+/* ---------- the printed quote ----------
+   Styled outside @media print on purpose: the sheet has to be measurable on
+   screen so it can be shrunk onto one page before the printer ever sees it. */
+
+.print-doc {
+  width: 100%;
+  background: #fff;
+  color: #000;
+  font: 11px/1.45 "Helvetica Neue", Helvetica, Arial, sans-serif;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+/* the brand band: PLYMR is yellow on clear and Crafter's Gallery is white,
+   so both only read on black — on bare white paper they vanish */
+.print-doc .p-brand {
+  display: flex; align-items: center; gap: 14px;
+  background: #000; color: #ffd60a;
+  padding: 8px 12px; margin: 0 0 12px;
+}
+.print-doc .p-brand img { display: block; height: 26px; width: auto; }
+.print-doc .p-brand img.cg { height: 21px; }
+.print-doc .p-brand-sep { width: 1px; height: 26px; background: #3a3a3a; }
+.print-doc .p-brand-tag {
+  margin-left: auto; font-size: 9px; font-weight: 700;
+  letter-spacing: .16em; text-transform: uppercase;
+}
+
+/* head */
+.print-doc .p-head {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 12px; border-bottom: 1px solid #dcdcdc;
+  padding-bottom: 8px; margin-bottom: 10px;
+}
+.print-doc .p-head h1 {
+  margin: 0; font-size: 27px; line-height: 1; letter-spacing: .04em;
+  text-transform: uppercase; display: inline-block;
+  border-bottom: 4px solid #ffd60a; padding-bottom: 5px;
+}
+.print-doc .p-meta { text-align: right; font-size: 10px; color: #454545; line-height: 1.5; }
+.print-doc .p-meta b { color: #000; font-size: 11.5px; }
+
+/* two columns */
+.print-doc .p-grid { display: flex; gap: 18px; align-items: flex-start; }
+.print-doc .p-col { flex: 1 1 0; min-width: 0; }
+.print-doc .p-money { margin-top: 4px; }
+
+.print-doc h2 {
+  margin: 10px 0 4px; font-size: 8.5px; font-weight: 700;
+  letter-spacing: .18em; text-transform: uppercase; color: #8a8a8a;
+  border-bottom: 1px solid #dcdcdc; padding-bottom: 3px;
+}
+.print-doc .p-sec:first-child h2 { margin-top: 0; }
+
+.print-doc .p-spec div {
+  display: flex; justify-content: space-between; gap: 10px;
+  padding: 3px 0; border-bottom: 1px solid #efefef;
+  font-size: 10.5px; color: #454545;
+}
+.print-doc .p-spec .p-val { text-align: right; color: #000; font-weight: 600; }
+.print-doc .p-chip {
+  display: inline-block; width: 9px; height: 9px;
+  border: .5pt solid #999; border-radius: 1px;
+  margin-left: 5px; vertical-align: -1px;
+}
+/* the design note under a colour, kept quiet so it reads as a footnote */
+.print-doc .p-design {
+  display: block; font-style: normal; font-weight: 400;
+  color: #454545; font-size: 9px; line-height: 1.35; margin-top: 1px;
+}
+.print-doc .p-badge { background: #ffd60a; color: #000; padding: 1px 5px; font-size: 9px; letter-spacing: .1em; }
+
+/* pricing */
+.print-doc .p-items { width: 100%; border-collapse: collapse; font-size: 10.5px; }
+.print-doc .p-items td { padding: 3px 0; border-bottom: 1px solid #efefef; color: #454545; }
+.print-doc .p-items td.num { text-align: right; color: #000; font-weight: 600; white-space: nowrap; }
+
+/* totals */
+.print-doc .p-totals {
+  background: #f5f5f5; border-left: 4px solid #ffd60a;
+  padding: 8px 12px; margin-top: 10px;
+}
+.print-doc .p-totals div {
+  display: flex; justify-content: space-between; gap: 10px;
+  padding: 3px 0; font-size: 10.5px; color: #454545;
+}
+.print-doc .p-totals div span:last-child { color: #000; font-weight: 600; }
+.print-doc .p-totals .grand, .print-doc .p-totals .bal {
+  border-top: 1px solid #d8d8d8; margin-top: 2px; padding-top: 4px;
+}
+.print-doc .p-totals .grand { font-size: 12.5px; }
+.print-doc .p-totals .grand span { color: #000; font-weight: 700; }
+
+/* notes and log */
+.print-doc .p-notes { font-size: 10.5px; color: #454545; line-height: 1.45; }
+.print-doc .p-log { list-style: none; margin: 0; padding: 0; font-size: 9.5px; color: #454545; }
+.print-doc .p-log li { padding: 2px 0; border-bottom: 1px solid #efefef; }
+.print-doc .p-log li b { color: #8a8a8a; font-weight: 600; margin-right: 4px; }
+.print-doc .p-more { color: #8a8a8a; }
+
+/* photos */
+.print-doc .p-photo-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+.print-doc .p-photo { margin: 0; width: 31%; }
+.print-doc .p-photo img { width: 100%; display: block; border: 1px solid #dcdcdc; }
+.print-doc .p-photo figcaption { font-size: 8.5px; color: #8a8a8a; }
+
+/* footer */
+.print-doc .p-foot {
+  display: flex; justify-content: space-between;
+  margin-top: 12px; padding-top: 5px; border-top: 1px solid #dcdcdc;
+  font-size: 8.5px; color: #8a8a8a; letter-spacing: .06em; text-transform: uppercase;
+}
+
 @media print {
+  @page { size: letter; margin: 10mm; }
   body { display: block !important; overflow: visible; background: #fff; color: #000; }
   .screen, .bar, .no-print, #screenList, #screenDetail { display: none !important; }
   .print-only { display: block !important; }
-  /* the brand band: PLYMR is yellow on clear and Crafter's Gallery is white,
-     so both only read on black — on bare white paper they vanish */
-  .p-brand {
-    display: flex; align-items: center; gap: 16px;
-    background: #000; color: #ffd60a;
-    padding: 9px 14px; margin: 0 0 16px;
-    -webkit-print-color-adjust: exact; print-color-adjust: exact;
-  }
-  .p-brand img { display: block; height: 26px; width: auto; }
-  .p-brand img.cg { height: 21px; }
-  .p-brand-sep { width: 1px; height: 26px; background: #3a3a3a; }
-  .p-brand-tag {
-    margin-left: auto; font-size: 9pt; font-weight: 700;
-    letter-spacing: .16em; text-transform: uppercase;
-  }
-  /* the design note under a colour, kept quiet so it reads as a footnote */
-  .p-design { font-style: normal; color: #444; font-size: 9pt; }
+  .print-doc .p-sec, .print-doc .p-totals, .print-doc .p-photo { break-inside: avoid; }
 }

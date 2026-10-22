@@ -710,8 +710,12 @@
   /* ---------- print / send ---------- */
 
   function printNow() {
-    $('printSheet').innerHTML = QS.printDoc.build(state.quote, state.photos);
-    setTimeout(function () { window.print(); }, 60);
+    var sheet = $('printSheet');
+    sheet.innerHTML = QS.printDoc.build(state.quote, state.photos);
+    /* one sheet, always: measure what was built and shrink it onto the page
+       if the quote has grown past it */
+    if (QS.printDoc.fit) QS.printDoc.fit(sheet);
+    setTimeout(function () { window.print(); }, 80);
   }
 
   function sendAs(kind) {

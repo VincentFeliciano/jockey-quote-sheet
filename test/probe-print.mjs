@@ -119,5 +119,67 @@ if (r.exceptionDetails) {
   }
 }
 
+/* ---------- one sheet, not two ---------- */
+const built = await send('Runtime.evaluate', {
+  expression: `(async function(){
+    var qs = await QS.store.listQuotes();
+    var q = QS.ensureShape(qs[0]);
+    /* the fullest quote the app can hold: every part, a design on each, a
+       restoration, notes and a log — if this fits one page, anything fits */
+    q.job = { jockey: 'Stocky the Jockey', due: '2026-11-02', rush: true };
+    q.paint.hat = { front: '#ffd60a', left: '#111111', right: '#111111', back: '#ffd60a', bill: '#111111',
+      frontDesign: 'Checkerboard band across the front', leftDesign: 'CG monogram in vinyl',
+      rightDesign: 'Number 7, white outline', backDesign: 'Saddle and reins', billDesign: 'Thin yellow pinstripe' };
+    q.paint.figure = { eyes: '#3b2a1a', hair: '#1a1a1a', body: '#ffffff', sleeves: '#ffd60a',
+      cuffs: '#111111', buttons: '#111111', pants: '#ffffff', boots: '#111111', bootCuffs: '#ffd60a',
+      eyesDesign: 'Wide open, black outline', hairDesign: 'Side parting, painted flat',
+      bodyDesign: 'Clean white, two coats', sleevesDesign: 'Checkerboard down the sleeve',
+      cuffsDesign: 'Plain black', buttonsDesign: 'Three black buttons', pantsDesign: 'Yellow side stripe',
+      bootsDesign: 'Black with yellow tops', bootCuffsDesign: 'Yellow fold-over' };
+    q.paint.base = { platform: '#2f7d32', base: '#000000', frontText: 'CRAFTER\\u2019S GALLERY', backText: '2026',
+      platformDesign: 'Green felt top', baseDesign: 'Matte black, sealed' };
+    q.paint.chestLogo = true; q.paint.chestText = 'CG monogram';
+    q.paint.backArt = true; q.paint.backText = 'Saddle and number 7';
+    q.paint.method = 'Mixed'; q.paint.custom = 'Vinyl cut lettering on the base, matte top coat.';
+    q.pricing = { paintTier: 'complex', decals: 2, decalWhere: 'Front and back', delivery: true };
+    q.restore = { concrete: true, work: 'Both', strip: true, resurface: true,
+      note: 'Crack down the left shoulder, repointed and sealed.' };
+    q.discount = 25; q.taxRate = 0; q.deposit = 100;
+    q.notes = 'Customer wants it before the meet. Base lettering in white vinyl, sealed with two coats. ' +
+      'Bring the spare hat so the front panel can be matched.';
+    q.log = [{ ts: new Date().toISOString(), text: 'Deposit taken' },
+             { ts: new Date().toISOString(), text: 'Colours agreed' }];
+    await QS.store.putQuote(q);
+    var sheet = document.getElementById('printSheet');
+    sheet.innerHTML = QS.printDoc.build(q, []);
+    return QS.printDoc.fit(sheet);
+  })()`,
+  awaitPromise: true,
+  returnByValue: true
+});
+if (built.exceptionDetails) {
+  console.log('ERROR ' + built.exceptionDetails.text);
+  process.exitCode = 1;
+} else {
+  const v = built.result.value;
+  console.log('sheet height   ' + Math.round(v.height) + 'px of 980');
+  console.log('sheet width    ' + Math.round(v.width) + 'px of 740');
+  console.log('shrink to fit  ' + v.zoom);
+  if (v.width > 740) {
+    console.log('FAIL — the sheet runs past the page width');
+    process.exitCode = 1;
+  }
+}
+await sleep(300);
+
+const printed = await send('Page.printToPDF', { printBackground: true, preferCSSPageSize: true });
+const pdfTxt = Buffer.from(printed.data, 'base64').toString('latin1');
+const pageCount = (pdfTxt.match(/\/Type\s*\/Page[^s]/g) || []).length;
+console.log('printed pages  ' + pageCount);
+if (pageCount !== 1) {
+  console.log('FAIL — the sheet spilled onto a second page');
+  process.exitCode = 1;
+}
+
 ws.close();
 chrome.kill();

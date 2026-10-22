@@ -1,20 +1,36 @@
 /* Turns a quote into a picture or a PDF you can text or email.
-   Drawn by hand on a canvas: no libraries, no network, works offline. */
+   Drawn by hand on a canvas: no libraries, no network, works offline.
+
+   The sheet is laid out for ONE page. Two columns carry the parts, the money
+   sits side by side underneath, and if a quote still runs long the whole thing
+   is scaled down to fit rather than spilling onto a second sheet. */
 window.QS = window.QS || {};
 
 QS.exportDoc = (function () {
   var W = 1240;            /* A4 at 150dpi */
   var H = 1754;
-  var M = 84;              /* margin */
+  var M = 76;              /* margin */
   var CW = W - M * 2;
-  var FOOT = 76;
+  var GAP = 40;            /* between the two columns */
+  var COLW = (CW - GAP) / 2;
+  var BRAND = 74;          /* the black band across the top */
+  var TOP = BRAND + 20;    /* first baseline area under the band */
+  var FOOT = 92;
+  var BOTTOM = H - FOOT;   /* content must end above this */
+  var AVAIL = BOTTOM - TOP;
+  var MIN_K = 0.52;        /* never shrink past this before giving up */
+
   var INK = '#0a0a0a';
   var MID = '#454545';
   var MUTED = '#8a8a8a';
   var LINE = '#dcdcdc';
   var YELLOW = '#ffd60a';
   var FONT = 'Helvetica, Arial, system-ui, sans-serif';
-  var BRAND = 78;          /* the black band across the top of every page */
+
+  /* fit factor: every type size and vertical step is multiplied by this, so a
+     long quote gets smaller but keeps the full width of the sheet */
+  var K = 1;
+  function S(v) { return Math.round(v * K * 10) / 10; }
 
   /* The marks: PLYMR is yellow on clear and Crafter's Gallery is white, so
      neither reads on white paper — they live on a black band. Both are loaded
@@ -86,8 +102,6 @@ QS.exportDoc = (function () {
     return out;
   }
 
-  function doc() { return { pages: [], ctx: null, y: 0 }; }
-
   function brandBand(ctx) {
     ctx.fillStyle = '#000000';
     ctx.fillRect(0, 0, W, BRAND);
@@ -99,171 +113,153 @@ QS.exportDoc = (function () {
 
     var p = marks.plymr;
     if (p) {
-      var ph = 30;
+      var ph = 28;
       var pw = ph * (p.naturalWidth / p.naturalHeight);
       ctx.drawImage(p, x, mid - ph / 2, pw, ph);
-      x += pw + 22;
+      x += pw + 20;
     }
 
     ctx.fillStyle = '#3a3a3a';
-    ctx.fillRect(x, mid - 17, 1.5, 34);
-    x += 23;
+    ctx.fillRect(x, mid - 16, 1.5, 32);
+    x += 21;
 
     var g = marks.cg;
     if (g) {
-      var gh = 26;
+      var gh = 24;
       var gw = gh * (g.naturalWidth / g.naturalHeight);
       ctx.drawImage(g, x, mid - gh / 2, gw, gh);
     }
 
     /* what the sheet is, said in the brand's own voice */
     var strap = 'QUOTE FOR CRAFTER\u2019S GALLERY';
-    font(ctx, '700', 17);
+    font(ctx, '700', 16);
     ctx.fillStyle = YELLOW;
     var sw = 0;
     for (var i = 0; i < strap.length; i++) sw += ctx.measureText(strap.charAt(i)).width + 2.6;
     spaced(ctx, strap, W - M - sw, mid + 6, 2.6);
   }
 
-  function page(d) {
-    var c = document.createElement('canvas');
-    c.width = W;
-    c.height = H;
-    var ctx = c.getContext('2d');
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, W, H);
-    ctx.textBaseline = 'alphabetic';
-    ctx.textAlign = 'left';
-    brandBand(ctx);
-    d.pages.push(c);
-    d.ctx = ctx;
-    /* continuation pages start below the running header, so nothing collides
-       with it */
-    d.y = d.pages.length > 1 ? BRAND + 70 : BRAND + 20;
-  }
-
-  function room(d, h) {
-    if (d.y + h > H - M - FOOT) { page(d); return true; }
-    return false;
+  /* a fresh cursor at the top of the sheet */
+  function sheet(ctx) {
+    return { ctx: ctx, x: M, y: TOP, w: CW };
   }
 
   function header(d, q) {
     var ctx = d.ctx;
     var j = q.job || {};
-    font(ctx, '700', 54);
+    font(ctx, '700', S(44));
     ctx.fillStyle = INK;
-    ctx.fillText('QUOTE', M, d.y + 44);
+    ctx.fillText('QUOTE', d.x, d.y + S(36));
     var w = ctx.measureText('QUOTE').width;
     ctx.fillStyle = YELLOW;
-    ctx.fillRect(M, d.y + 60, w, 7);
+    ctx.fillRect(d.x, d.y + S(44), w, S(6));
 
+    var right = d.x + d.w;
     ctx.textAlign = 'right';
-    font(ctx, '700', 25);
+    font(ctx, '700', S(22));
     ctx.fillStyle = INK;
-    ctx.fillText(q.number || 'un-numbered', W - M, d.y + 18);
-    var ry = d.y + 48;
-    font(ctx, '400', 19);
+    ctx.fillText(q.number || 'un-numbered', right, d.y + S(15));
+    var ry = d.y + S(40);
+    font(ctx, '400', S(17));
     ctx.fillStyle = MID;
-    if (j.due) { ctx.fillText('Due ' + fmtDate(j.due), W - M, ry); ry += 26; }
-    if (q.preparedBy) { ctx.fillText('Prepared by ' + q.preparedBy, W - M, ry); ry += 26; }
+    if (j.due) { ctx.fillText('Due ' + fmtDate(j.due), right, ry); ry += S(22); }
+    if (q.preparedBy) { ctx.fillText('Prepared by ' + q.preparedBy, right, ry); ry += S(22); }
     ctx.textAlign = 'left';
 
-    d.y += Math.max(108, ry - d.y + 8);
+    d.y += Math.max(S(64), ry - d.y + S(4));
     ctx.fillStyle = LINE;
-    ctx.fillRect(M, d.y, CW, 1.5);
-    d.y += 34;
+    ctx.fillRect(d.x, d.y, d.w, 1.5);
+    d.y += S(22);
   }
 
   function sectionTitle(d, text) {
     var ctx = d.ctx;
-    font(ctx, '700', 15);
+    font(ctx, '700', S(12.5));
     ctx.fillStyle = MUTED;
-    spaced(ctx, String(text).toUpperCase(), M, d.y + 12, 2.2);
+    spaced(ctx, String(text).toUpperCase(), d.x, d.y + S(11), 2);
     ctx.fillStyle = LINE;
-    ctx.fillRect(M, d.y + 26, CW, 1.5);
-    d.y += 46;
+    ctx.fillRect(d.x, d.y + S(22), d.w, 1.5);
+    d.y += S(30);
   }
 
   function row(d, label, value, hex, badge, design) {
     var ctx = d.ctx;
-    var right = W - M;
+    var right = d.x + d.w;
     var text = value || '';
 
-    font(ctx, '400', 20);
+    var lines = [];
+    if (design) {
+      font(ctx, '400', S(14));
+      lines = wrap(ctx, design, d.w - S(4)).slice(0, 2);
+    }
+    var h = S(34) + lines.length * S(19);
+
+    font(ctx, '400', S(17.5));
     ctx.fillStyle = MID;
-    ctx.fillText(label, M, d.y + 21);
+    ctx.fillText(label, d.x, d.y + S(21));
 
     if (badge && text) {
-      font(ctx, '700', 17);
-      var bw = ctx.measureText(text).width + 26;
+      font(ctx, '700', S(15));
+      var bw = ctx.measureText(text).width + S(22);
       ctx.fillStyle = YELLOW;
-      ctx.fillRect(right - bw, d.y + 3, bw, 30);
+      ctx.fillRect(right - bw, d.y + S(4), bw, S(26));
       ctx.fillStyle = INK;
       ctx.textAlign = 'right';
-      ctx.fillText(text, right - 13, d.y + 24);
+      ctx.fillText(text, right - S(11), d.y + S(23));
       ctx.textAlign = 'left';
     } else if (/^#[0-9a-f]{6}$/i.test(hex || '')) {
       ctx.fillStyle = hex;
-      ctx.fillRect(right - 24, d.y + 5, 22, 22);
+      ctx.fillRect(right - S(21), d.y + S(6), S(19), S(19));
       ctx.strokeStyle = '#c2c2c2';
       ctx.lineWidth = 1;
-      ctx.strokeRect(right - 24.5, d.y + 4.5, 23, 23);
-      font(ctx, '600', 20);
+      ctx.strokeRect(right - S(21) - 0.5, d.y + S(6) - 0.5, S(19) + 1, S(19) + 1);
+      font(ctx, '600', S(18));
       ctx.fillStyle = INK;
       ctx.textAlign = 'right';
-      ctx.fillText(text || hex, right - 34, d.y + 22);
+      ctx.fillText(text || hex, right - S(28), d.y + S(22));
       ctx.textAlign = 'left';
     } else {
-      font(ctx, '600', 20);
+      font(ctx, '600', S(18));
       ctx.fillStyle = text ? INK : MUTED;
       ctx.textAlign = 'right';
-      ctx.fillText(text || '—', right, d.y + 22);
+      ctx.fillText(text || '\u2014', right, d.y + S(22));
       ctx.textAlign = 'left';
     }
 
-    /* The design note sits under its colour, in the same quiet grey the
-       labels use, so the sheet still reads as a list of parts. */
-    var extra = 0;
-    if (design) {
-      var lines = wrap(ctx, design, CW - 8).slice(0, 2);
-      font(ctx, '400', 16);
+    /* the design note sits under its colour, quiet, so the sheet still reads
+       as a list of parts */
+    if (lines.length) {
+      font(ctx, '400', S(14));
       ctx.fillStyle = MID;
       lines.forEach(function (ln, i) {
-        ctx.fillText(ln, M, d.y + 46 + i * 19);
+        ctx.fillText(ln, d.x, d.y + S(21) + S(15) + i * S(19));
       });
-      extra = 22 + lines.length * 19;
     }
 
     ctx.fillStyle = LINE;
-    ctx.fillRect(M, d.y + 38 + extra, CW, 1);
-    d.y += 46 + extra;
+    ctx.fillRect(d.x, d.y + h - 1, d.w, 1);
+    d.y += h;
   }
 
   function specBlock(d, title, rows) {
     rows = rows.filter(function (r) { return r && (r.value || r.hex); });
     if (!rows.length) return;
-    var tall = rows.reduce(function (n, r) { return n + (r.design ? 44 : 0); }, 0);
-    room(d, 60 + rows.length * 46 + tall);
     sectionTitle(d, title);
     rows.forEach(function (r) {
-      room(d, 46 + (r.design ? 44 : 0));
       row(d, r.label, r.value, r.hex, r.badge, r.design);
     });
-    d.y += 16;
+    d.y += S(16);
   }
 
-  function piece(d, q) {
-    var j = q.job || {};
-    specBlock(d, 'The piece', [
-      { label: 'Jockey name', value: j.jockey },
-      { label: 'Due date', value: fmtDate(j.due) },
-      { label: 'Rush job', value: j.rush ? 'RUSH JOB' : '', badge: true }
-    ]);
-  }
+  /* ---------- the parts, two columns ---------- */
 
-  function paintSpec(d, q) {
+  function specs(d, q) {
     var p = QS.fillPaint(q.paint);
+    var j = q.job || {};
+    var top = d.y;
 
+    /* left: the painted parts */
+    d.x = M; d.w = COLW;
     specBlock(d, 'Hat', [
       { label: 'Front panel', value: p.hat.frontName || p.hat.front, hex: p.hat.front, design: p.hat.frontDesign },
       { label: 'Left side', value: p.hat.leftName || p.hat.left, hex: p.hat.left, design: p.hat.leftDesign },
@@ -271,7 +267,6 @@ QS.exportDoc = (function () {
       { label: 'Back panel', value: p.hat.backName || p.hat.back, hex: p.hat.back, design: p.hat.backDesign },
       { label: 'Bill', value: p.hat.billName || p.hat.bill, hex: p.hat.bill, design: p.hat.billDesign }
     ]);
-
     specBlock(d, 'Jockey', [
       { label: 'Eyes', value: p.figure.eyesName || p.figure.eyes, hex: p.figure.eyes, design: p.figure.eyesDesign },
       { label: 'Hair', value: p.figure.hairName || p.figure.hair, hex: p.figure.hair, design: p.figure.hairDesign },
@@ -285,21 +280,27 @@ QS.exportDoc = (function () {
       { label: 'Chest logo', value: (p.chestLogo || p.chestText) ? (p.chestText || 'Yes') : '' },
       { label: 'Back artwork', value: (p.backArt || p.backText) ? (p.backText || 'Yes') : '' }
     ]);
+    var leftEnd = d.y;
 
+    /* right: the job, the base and the restoration */
+    d.x = M + COLW + GAP; d.w = COLW; d.y = top;
+    specBlock(d, 'The piece', [
+      { label: 'Jockey name', value: j.jockey },
+      { label: 'Due date', value: fmtDate(j.due) },
+      { label: 'Rush job', value: j.rush ? 'RUSH JOB' : '', badge: true }
+    ]);
     specBlock(d, 'Platform & base', [
       { label: 'Platform', value: p.base.platformName || p.base.platform, hex: p.base.platform, design: p.base.platformDesign },
       { label: 'Base', value: p.base.baseName || p.base.base, hex: p.base.base, design: p.base.baseDesign },
       { label: 'Base front text', value: p.base.frontText },
       { label: 'Base back text', value: p.base.backText }
     ]);
-
     specBlock(d, 'Custom request', [
       { label: 'Method', value: p.method },
       { label: 'Asked for', value: p.custom }
     ]);
-
-    var r = QS.fillRestore(q.restore);
     if (QS.hasRestore(q)) {
+      var r = QS.fillRestore(q.restore);
       specBlock(d, 'Restoration', [
         { label: 'Piece', value: r.concrete ? 'Concrete' : 'Not concrete' },
         { label: 'Work needed', value: r.work && r.work !== 'None' ? r.work : '' },
@@ -308,30 +309,44 @@ QS.exportDoc = (function () {
         { label: 'Notes', value: r.note }
       ]);
     }
+    var rightEnd = d.y;
+
+    d.x = M; d.w = CW;
+    d.y = Math.max(leftEnd, rightEnd) + S(6);
+  }
+
+  /* ---------- the money, side by side ---------- */
+
+  function clip(ctx, text, maxWidth) {
+    text = String(text || '');
+    if (ctx.measureText(text).width <= maxWidth) return text;
+    var cut = text;
+    while (cut.length > 1 && ctx.measureText(cut + '\u2026').width > maxWidth) {
+      cut = cut.slice(0, -1);
+    }
+    return cut + '\u2026';
   }
 
   function line(d, label, value) {
-    room(d, 48);
     var ctx = d.ctx;
-    font(ctx, '400', 21);
+    font(ctx, '600', S(18));
+    var vw = ctx.measureText(value).width;
+    font(ctx, '400', S(18));
     ctx.fillStyle = MID;
-    ctx.fillText(label, M, d.y + 22);
-    font(ctx, '600', 21);
+    ctx.fillText(clip(ctx, label, d.w - vw - S(14)), d.x, d.y + S(21));
+    font(ctx, '600', S(18));
     ctx.fillStyle = INK;
     ctx.textAlign = 'right';
-    ctx.fillText(value, W - M, d.y + 22);
+    ctx.fillText(value, d.x + d.w, d.y + S(21));
     ctx.textAlign = 'left';
     ctx.fillStyle = LINE;
-    ctx.fillRect(M, d.y + 38, CW, 1);
-    d.y += 46;
+    ctx.fillRect(d.x, d.y + S(30), d.w, 1);
+    d.y += S(34);
   }
 
   function pricing(d, q) {
     var t = QS.totals(q);
     var p = QS.fillPricing(q.pricing);
-    var rows = 3 + (t.decalCount ? 1 : 0) +
-      (t.restoreStrip ? 1 : 0) + (t.restoreSurface ? 1 : 0);
-    room(d, 70 + rows * 46);
     sectionTitle(d, 'Pricing');
     line(d, 'Paint job' + (t.paintLabel ? ' \u2014 ' + t.paintLabel : ''), QS.money(t.paint));
     if (t.decalCount) {
@@ -341,7 +356,6 @@ QS.exportDoc = (function () {
     line(d, 'Delivery', t.delivery ? QS.money(t.delivery) : '\u2014');
     if (t.restoreStrip) line(d, 'Strip old paint', QS.money(t.restoreStrip));
     if (t.restoreSurface) line(d, 'Resurface with cement', QS.money(t.restoreSurface));
-    d.y += 14;
   }
 
   function totals(d, q) {
@@ -355,117 +369,156 @@ QS.exportDoc = (function () {
       rows.push(['Balance due', QS.money(t.balance), true]);
     }
 
-    var h = 44 + rows.length * 44;
-    room(d, h + 20);
     var ctx = d.ctx;
+    var pitch = S(36);
+    var h = S(14) + rows.length * pitch + S(12);
     var top = d.y;
     ctx.fillStyle = '#f5f5f5';
-    ctx.fillRect(M, top, CW, h);
+    ctx.fillRect(d.x, top, d.w, h);
     ctx.fillStyle = YELLOW;
-    ctx.fillRect(M, top, 7, h);
+    ctx.fillRect(d.x, top, S(6), h);
 
-    var y = top + 34;
+    var y = top + S(14) + S(24);
     rows.forEach(function (r) {
       var big = r[2];
-      font(ctx, big ? '700' : '400', big ? 26 : 20);
+      font(ctx, big ? '700' : '400', big ? S(22) : S(18));
       ctx.fillStyle = big ? INK : MID;
-      ctx.fillText(r[0], M + 30, y);
+      ctx.fillText(r[0], d.x + S(20), y);
       ctx.fillStyle = INK;
       ctx.textAlign = 'right';
-      ctx.fillText(r[1], W - M - 26, y);
+      ctx.fillText(r[1], d.x + d.w - S(18), y);
       ctx.textAlign = 'left';
-      y += 44;
+      y += pitch;
     });
-
-    d.y = top + h + 30;
+    d.y = top + h;
   }
+
+  function money(d, q) {
+    var top = d.y;
+    d.x = M; d.w = COLW;
+    pricing(d, q);
+    var leftEnd = d.y;
+    d.x = M + COLW + GAP; d.w = COLW; d.y = top;
+    totals(d, q);
+    var rightEnd = d.y;
+    d.x = M; d.w = CW;
+    d.y = Math.max(leftEnd, rightEnd) + S(16);
+  }
+
+  /* ---------- the rest, full width ---------- */
 
   function notes(d, q) {
     if (!q.notes) return;
     var ctx = d.ctx;
-    font(ctx, '400', 20);
-    var lines = wrap(ctx, q.notes, CW);
-    room(d, 60 + Math.min(lines.length, 8) * 30);
+    font(ctx, '400', S(17));
+    var lines = wrap(ctx, q.notes, d.w);
     sectionTitle(d, 'Notes');
     lines.forEach(function (ln) {
-      room(d, 30);
-      font(d.ctx, '400', 20);
+      font(d.ctx, '400', S(17));
       d.ctx.fillStyle = MID;
-      d.ctx.fillText(ln, M, d.y + 18);
-      d.y += 30;
+      d.ctx.fillText(ln, d.x, d.y + S(16));
+      d.y += S(22);
     });
-    d.y += 16;
+    d.y += S(10);
   }
 
   function followUp(d, q) {
     if (!q.log || !q.log.length) return;
-    var ctx = d.ctx;
-    room(d, 90);
     sectionTitle(d, 'Follow-up');
-    q.log.forEach(function (e) {
-      room(d, 32);
+    /* a long history is summarised, not reprinted: the sheet stays one page */
+    var entries = q.log.slice(-8);
+    var hidden = q.log.length - entries.length;
+    if (hidden > 0) {
+      font(d.ctx, '400', S(15));
+      d.ctx.fillStyle = MUTED;
+      d.ctx.fillText('+' + hidden + ' earlier', d.x, d.y + S(14));
+      d.y += S(20);
+    }
+    entries.forEach(function (e) {
       var dt = new Date(e.ts);
       var stamp = isNaN(dt.getTime()) ? '' : dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-      font(d.ctx, '400', 18);
+      font(d.ctx, '400', S(15));
       d.ctx.fillStyle = MUTED;
-      d.ctx.fillText(stamp, M, d.y + 16);
+      d.ctx.fillText(stamp, d.x, d.y + S(14));
+      font(d.ctx, '400', S(15));
       d.ctx.fillStyle = MID;
-      var txt = wrap(d.ctx, e.text || '', CW - 130);
-      d.ctx.fillText(txt[0] || '', M + 120, d.y + 16);
-      d.y += 30;
+      var txt = wrap(d.ctx, e.text || '', d.w - S(110));
+      d.ctx.fillText(txt[0] || '', d.x + S(96), d.y + S(14));
+      d.y += S(22);
     });
-    d.y += 16;
+    d.y += S(10);
   }
 
-  function footers(d, q) {
-    var n = d.pages.length;
-    d.pages.forEach(function (c, i) {
-      var ctx = c.getContext('2d');
+  function footer(ctx, q) {
+    var y = H - 46;
+    ctx.fillStyle = LINE;
+    ctx.fillRect(M, y - 30, CW, 1);
+    font(ctx, '400', S(15));
+    ctx.fillStyle = MUTED;
+    ctx.textAlign = 'left';
+    ctx.fillText((q.number || 'Quote') +
+      (q.job && q.job.jockey ? ' \u00b7 ' + q.job.jockey : ''), M, y);
+    ctx.textAlign = 'right';
+    ctx.fillText(String(q.status || '').toUpperCase(), W - M, y);
+    ctx.textAlign = 'left';
+  }
 
-      /* continuation pages carry a slim running header, so a page printed on
-         its own still says what it is and whose it is */
-      if (i > 0) {
-        font(ctx, '700', 17);
-        ctx.fillStyle = MUTED;
-        spaced(ctx, 'QUOTE', M, BRAND + 34, 2.2);
-        font(ctx, '400', 16);
-        ctx.fillStyle = MUTED;
-        ctx.textAlign = 'right';
-        ctx.fillText((q.number || 'Quote') +
-          (q.job && q.job.jockey ? ' \u00b7 ' + q.job.jockey : '') +
-          ' \u00b7 continued', W - M, BRAND + 34);
-        ctx.textAlign = 'left';
-        ctx.fillStyle = YELLOW;
-        ctx.fillRect(M, BRAND + 46, 46, 3);
-        ctx.fillStyle = LINE;
-        ctx.fillRect(M + 54, BRAND + 47, CW - 54, 1.5);
-      }
+  /* ---------- compose, then shrink to fit one sheet ---------- */
 
-      var y = H - 52;
-      ctx.fillStyle = LINE;
-      ctx.fillRect(M, y - 26, CW, 1);
-      font(ctx, '400', 16);
-      ctx.fillStyle = MUTED;
-      ctx.textAlign = 'left';
-      ctx.fillText((q.number || 'Quote') + ' \u00b7 ' + (q.job && q.job.jockey ? q.job.jockey : ''), M, y);
-      ctx.textAlign = 'right';
-      ctx.fillText('Page ' + (i + 1) + ' of ' + n, W - M, y);
-      ctx.textAlign = 'left';
-    });
+  function layout(q, ctx) {
+    var d = sheet(ctx);
+    header(d, q);
+    specs(d, q);
+    money(d, q);
+    notes(d, q);
+    followUp(d, q);
+    return d.y;
+  }
+
+  function scratch() {
+    var c = document.createElement('canvas');
+    c.width = W;
+    c.height = 4000;
+    var ctx = c.getContext('2d');
+    ctx.textBaseline = 'alphabetic';
+    ctx.textAlign = 'left';
+    return ctx;
+  }
+
+  /* how tall the sheet wants to be at the current fit factor */
+  function needed(q) {
+    return layout(q, scratch()) - TOP;
   }
 
   function render(q) {
-    var d = doc();
-    page(d);
-    header(d, q);
-    piece(d, q);
-    paintSpec(d, q);
-    pricing(d, q);
-    totals(d, q);
-    notes(d, q);
-    followUp(d, q);
-    footers(d, q);
-    return d.pages;
+    K = 1;
+    var h = needed(q);
+    var guard = 0;
+    /* nothing spills onto a second page: the sheet shrinks instead */
+    while (h > AVAIL && K > MIN_K && guard++ < 5) {
+      K = Math.max(MIN_K, K * (AVAIL / h) * 0.98);
+      h = needed(q);
+    }
+    /* and when the quote is short, it grows into the space rather than
+       leaving half the sheet blank — but only if it still fits */
+    if (h < AVAIL * 0.88) {
+      var was = K;
+      K = Math.min(1.18, K * (AVAIL * 0.95) / h);
+      if (needed(q) > AVAIL) K = was;
+    }
+
+    var c = document.createElement('canvas');
+    c.width = W;
+    c.height = H;
+    var ctx = c.getContext('2d');
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, W, H);
+    ctx.textBaseline = 'alphabetic';
+    ctx.textAlign = 'left';
+    brandBand(ctx);
+    layout(q, ctx);
+    footer(ctx, q);
+    return [c];
   }
 
   /* ---------- files ---------- */
@@ -475,7 +528,7 @@ QS.exportDoc = (function () {
     return n || 'quote';
   }
 
-  /* one tall picture if the quote runs over a page */
+  /* one picture, always — kept for the day a sheet ever needs stitching */
   function stitch(pages) {
     if (pages.length === 1) return pages[0];
     var c = document.createElement('canvas');
@@ -598,5 +651,6 @@ QS.exportDoc = (function () {
     return Promise.resolve({ shared: false, downloaded: true, name: out.name, pages: out.pages });
   }
 
-  return { render: render, png: png, pdf: pdf, share: share, download: download, brandReady: brandReady };
+  return { render: render, png: png, pdf: pdf, share: share, download: download,
+    brandReady: brandReady, scale: function () { return K; } };
 })();

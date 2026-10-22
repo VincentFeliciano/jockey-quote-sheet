@@ -115,6 +115,7 @@ writeFileSync(resolve('test/export-sample.pdf'), Buffer.from(pdf.b64, 'base64'))
 
 console.log('restore on the record: ' + await evalJs('window.__restoreSeen'));
 console.log('png ' + png.name + ' pages=' + png.pages + ' bytes=' + Buffer.from(png.b64, 'base64').length);
+console.log('fit factor ' + await evalJs('QS.exportDoc.scale()'));
 console.log('pdf ' + pdf.name + ' pages=' + pdf.pages + ' bytes=' + Buffer.from(pdf.b64, 'base64').length);
 
 ws.close();
