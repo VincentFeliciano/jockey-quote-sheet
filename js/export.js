@@ -63,6 +63,37 @@ QS.exportDoc = (function () {
     return new Promise(function (res) { waiters.push(res); });
   }
 
+  /* ---------- the reference photos ----------
+
+     A canvas cannot decode a picture while it is drawing, so the photos are
+     decoded ahead of time and kept here. The app preloads them whenever the
+     photo grid is rendered, which is why an export is still built inside the
+     tap that asked for it: the share sheet needs that gesture. */
+
+  var photoCache = {};
+
+  function photoKey(ph) { return ph.id || ph.dataUrl; }
+
+  function loadPhoto(ph) {
+    return new Promise(function (res) {
+      var key = photoKey(ph);
+      if (photoCache[key]) return res(photoCache[key]);
+      var im;
+      try { im = new Image(); } catch (e) { return res(null); }
+      im.onload = function () { if (im.naturalWidth) photoCache[key] = im; res(photoCache[key] || null); };
+      im.onerror = function () { res(null); };
+      im.src = ph.dataUrl;
+    });
+  }
+
+  function preload(photos) {
+    return Promise.all((photos || []).map(loadPhoto));
+  }
+
+  function ready(photos) {
+    return (photos || []).every(function (ph) { return !!photoCache[photoKey(ph)]; });
+  }
+
   function font(ctx, weight, size) {
     ctx.font = weight + ' ' + size + 'px ' + FONT;
   }
@@ -162,6 +193,7 @@ QS.exportDoc = (function () {
     var ry = d.y + S(40);
     font(ctx, '400', S(17));
     ctx.fillStyle = MID;
+    if (q.date) { ctx.fillText('Dated ' + fmtDate(q.date), right, ry); ry += S(22); }
     if (j.due) { ctx.fillText('Due ' + fmtDate(j.due), right, ry); ry += S(22); }
     if (q.preparedBy) { ctx.fillText('Prepared by ' + q.preparedBy, right, ry); ry += S(22); }
     ctx.textAlign = 'left';
@@ -190,7 +222,7 @@ QS.exportDoc = (function () {
     var lines = [];
     if (design) {
       font(ctx, '400', S(14));
-      lines = wrap(ctx, design, d.w - S(4)).slice(0, 2);
+      lines = wrap(ctx, 'Design: ' + design, d.w - S(4)).slice(0, 2);
     }
     var h = S(34) + lines.length * S(19);
 
@@ -449,6 +481,82 @@ QS.exportDoc = (function () {
     d.y += S(10);
   }
 
+  /* ---------- the photos, so the design can be checked by eye ---------- */
+
+  function photoStrip(d, photos) {
+    if (!photos || !photos.length) return;
+    var ctx = d.ctx;
+    var shown = photos.slice(0, 4);
+    var more = photos.length - shown.length;
+    var h = S(104);
+    var gap = S(14);
+    var w = (d.w - gap * (shown.length - 1)) / shown.length;
+    var captioned = false;
+
+    sectionTitle(d, 'Reference photos');
+    var top = d.y;
+    shown.forEach(function (ph, i) {
+      var im = photoCache[photoKey(ph)];
+      var x = d.x + i * (w + gap);
+      ctx.strokeStyle = LINE;
+      ctx.lineWidth = 1;
+      ctx.strokeRect(x + 0.5, top + 0.5, w - 1, h - 1);
+      if (im && im.naturalWidth) {
+        var sc = Math.min((w - S(6)) / im.naturalWidth, (h - S(6)) / im.naturalHeight);
+        var iw = im.naturalWidth * sc;
+        var ih = im.naturalHeight * sc;
+        ctx.drawImage(im, x + (w - iw) / 2, top + (h - ih) / 2, iw, ih);
+      }
+      if (ph.caption) {
+        captioned = true;
+        font(ctx, '400', S(12));
+        ctx.fillStyle = MUTED;
+        ctx.fillText(clip(ctx, ph.caption, w), x, top + h + S(15));
+      }
+    });
+    d.y = top + h + (captioned ? S(22) : 0) + S(12);
+
+    if (more > 0) {
+      font(ctx, '400', S(13));
+      ctx.fillStyle = MUTED;
+      ctx.fillText('+' + more + ' more photo' + (more === 1 ? '' : 's'), d.x, d.y);
+      d.y += S(18);
+    }
+  }
+
+  /* ---------- the bit the customer signs ----------
+
+     This is a confirmation sheet as much as a quote: the point of it is that
+     someone reads every colour and design and puts their name to it. */
+
+  function confirmBlock(d, q) {
+    var ctx = d.ctx;
+    var h = S(100);
+    sectionTitle(d, 'Please confirm');
+    var top = d.y;
+    ctx.fillStyle = '#f7f7f7';
+    ctx.fillRect(d.x, top, d.w, h);
+    ctx.fillStyle = YELLOW;
+    ctx.fillRect(d.x, top, S(6), h);
+
+    font(ctx, '400', S(14.5));
+    ctx.fillStyle = MID;
+    ctx.fillText('Check every colour, design and note above against what you asked for.',
+      d.x + S(20), top + S(24));
+
+    var half = (d.w - S(40) - S(28)) / 2;
+    var y = top + h - S(20);
+    ctx.fillStyle = '#c2c2c2';
+    ctx.fillRect(d.x + S(20), y, half, 1);
+    ctx.fillRect(d.x + S(20) + half + S(28), y, half, 1);
+    font(ctx, '400', S(12));
+    ctx.fillStyle = MUTED;
+    ctx.fillText('Signed', d.x + S(20), y - S(7));
+    ctx.fillText('Date', d.x + S(20) + half + S(28), y - S(7));
+
+    d.y = top + h + S(10);
+  }
+
   function footer(ctx, q) {
     var y = H - 46;
     ctx.fillStyle = LINE;
@@ -465,13 +573,15 @@ QS.exportDoc = (function () {
 
   /* ---------- compose, then shrink to fit one sheet ---------- */
 
-  function layout(q, ctx) {
+  function layout(q, ctx, photos) {
     var d = sheet(ctx);
     header(d, q);
     specs(d, q);
     money(d, q);
     notes(d, q);
     followUp(d, q);
+    photoStrip(d, photos);
+    confirmBlock(d, q);
     return d.y;
   }
 
@@ -486,25 +596,25 @@ QS.exportDoc = (function () {
   }
 
   /* how tall the sheet wants to be at the current fit factor */
-  function needed(q) {
-    return layout(q, scratch()) - TOP;
+  function needed(q, photos) {
+    return layout(q, scratch(), photos) - TOP;
   }
 
-  function render(q) {
+  function render(q, photos) {
     K = 1;
-    var h = needed(q);
+    var h = needed(q, photos);
     var guard = 0;
     /* nothing spills onto a second page: the sheet shrinks instead */
     while (h > AVAIL && K > MIN_K && guard++ < 5) {
       K = Math.max(MIN_K, K * (AVAIL / h) * 0.98);
-      h = needed(q);
+      h = needed(q, photos);
     }
     /* and when the quote is short, it grows into the space rather than
        leaving half the sheet blank — but only if it still fits */
     if (h < AVAIL * 0.88) {
       var was = K;
       K = Math.min(1.18, K * (AVAIL * 0.95) / h);
-      if (needed(q) > AVAIL) K = was;
+      if (needed(q, photos) > AVAIL) K = was;
     }
 
     var c = document.createElement('canvas');
@@ -516,7 +626,7 @@ QS.exportDoc = (function () {
     ctx.textBaseline = 'alphabetic';
     ctx.textAlign = 'left';
     brandBand(ctx);
-    layout(q, ctx);
+    layout(q, ctx, photos);
     footer(ctx, q);
     return [c];
   }
@@ -601,15 +711,15 @@ QS.exportDoc = (function () {
     return new Blob(chunks, { type: 'application/pdf' });
   }
 
-  function png(q) {
-    var pages = render(q);
+  function png(q, photos) {
+    var pages = render(q, photos);
     var canvas = stitch(pages);
     var bytes = dataUrlBytes(canvas.toDataURL('image/png'));
     return { blob: new Blob([bytes], { type: 'image/png' }), name: slug(q) + '.png', pages: pages.length };
   }
 
-  function pdf(q) {
-    var pages = render(q);
+  function pdf(q, photos) {
+    var pages = render(q, photos);
     return { blob: pdfFrom(pages), name: slug(q) + '.pdf', pages: pages.length };
   }
 
@@ -625,10 +735,16 @@ QS.exportDoc = (function () {
   }
 
   /* Native share sheet where it exists — Messages, Mail, WhatsApp — and a
-     download where it does not. Built synchronously so the tap still counts
-     as the gesture the share sheet requires. */
-  function share(kind, q) {
-    var out = kind === 'pdf' ? pdf(q) : png(q);
+     download where it does not. The photos are normally already decoded (the
+     app preloads them with the photo grid), so this is built synchronously and
+     the tap still counts as the gesture the share sheet requires. */
+  function share(kind, q, photos) {
+    if (ready(photos)) return shareNow(kind, q, photos);
+    return preload(photos).then(function () { return shareNow(kind, q, photos); });
+  }
+
+  function shareNow(kind, q, photos) {
+    var out = kind === 'pdf' ? pdf(q, photos) : png(q, photos);
     var file;
     try {
       file = new File([out.blob], out.name, { type: out.blob.type });
@@ -652,5 +768,6 @@ QS.exportDoc = (function () {
   }
 
   return { render: render, png: png, pdf: pdf, share: share, download: download,
-    brandReady: brandReady, scale: function () { return K; } };
+    brandReady: brandReady, preload: preload, ready: ready, measure: needed,
+    scale: function () { return K; } };
 })();

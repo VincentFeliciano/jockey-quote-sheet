@@ -22,13 +22,20 @@ QS.printDoc = (function () {
     return esc(s).replace(/\n/g, '<br>');
   }
 
+  function fmtDate(iso) {
+    if (!iso) return '';
+    var d = new Date(String(iso) + 'T12:00:00');
+    if (isNaN(d.getTime())) return String(iso);
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  }
+
   function swatch(hex, name, design) {
     var chip = '';
     if (/^#[0-9a-f]{6}$/i.test(hex || '')) {
       chip = '<i class="p-chip" style="background:' + esc(hex) + '"></i>';
     }
     var label = esc(name || '') || (hex ? esc(hex) : '\u2014');
-    var note = design ? '<em class="p-design">' + esc(design) + '</em>' : '';
+    var note = design ? '<em class="p-design">Design: ' + esc(design) + '</em>' : '';
     return label + chip + note;
   }
 
@@ -65,7 +72,8 @@ QS.printDoc = (function () {
     out.push('<div><h1>Quote</h1></div>');
     out.push('<div class="p-meta">');
     out.push('<div><b>' + esc(q.number || 'un-numbered') + '</b></div>');
-    if (j.due) out.push('<div>Due ' + esc(j.due) + '</div>');
+    if (q.date) out.push('<div>Dated ' + esc(fmtDate(q.date)) + '</div>');
+    if (j.due) out.push('<div>Due ' + esc(fmtDate(j.due)) + '</div>');
     if (q.preparedBy) out.push('<div>Prepared by ' + esc(q.preparedBy) + '</div>');
     out.push('</div></div>');
 
@@ -196,6 +204,13 @@ QS.printDoc = (function () {
       });
       out.push(section('Reference photos', '<div class="p-photo-grid">' + figs.join('') + '</div>'));
     }
+
+    /* the bit the customer signs — this sheet exists to be confirmed */
+    out.push('<div class="p-confirm">');
+    out.push('<h2>Please confirm</h2>');
+    out.push('<p>Check every colour, design and note above against what you asked for.</p>');
+    out.push('<div class="p-sign"><span>Signed</span><span>Date</span></div>');
+    out.push('</div>');
 
     /* footer */
     out.push('<div class="p-foot"><span>' + esc(q.number || 'Quote') +

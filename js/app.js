@@ -525,6 +525,9 @@
   /* ---------- photos ---------- */
 
   function renderPhotos() {
+    /* decode the photos now, while nothing is waiting, so the export can be
+       built inside the tap that asks for it */
+    if (QS.exportDoc && QS.exportDoc.preload) QS.exportDoc.preload(state.photos);
     QS.ui.buildPhotos(dom.photoGrid, state.photos, {
       remove: async function (p) {
         await QS.store.deletePhoto(p.id);
@@ -590,7 +593,7 @@
     if (!state.quote) return;
     var res;
     try {
-      res = QS.exportDoc.share(kind, state.quote);
+      res = QS.exportDoc.share(kind, state.quote, state.photos);
     } catch (e) {
       return note('Could not build the ' + kind, true);
     }

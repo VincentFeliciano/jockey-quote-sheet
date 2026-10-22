@@ -733,6 +733,21 @@ input[type="color"] { min-height: 42px; padding: 3px; width: 56px; flex: 0 0 56p
 .print-doc .p-photo img { width: 100%; display: block; border: 1px solid #dcdcdc; }
 .print-doc .p-photo figcaption { font-size: 8.5px; color: #8a8a8a; }
 
+/* the confirmation the customer signs */
+.print-doc .p-confirm {
+  margin-top: 10px; background: #f7f7f7;
+  border-left: 4px solid #ffd60a; padding: 7px 12px 9px;
+}
+.print-doc .p-confirm h2 {
+  margin: 0 0 2px; border: 0; padding: 0; color: #454545;
+}
+.print-doc .p-confirm p { margin: 0; font-size: 9.5px; color: #454545; }
+.print-doc .p-sign { display: flex; gap: 22px; margin-top: 15px; }
+.print-doc .p-sign span {
+  flex: 1 1 0; border-top: 1px solid #c2c2c2; padding-top: 2px;
+  font-size: 8px; color: #8a8a8a; text-transform: uppercase; letter-spacing: .1em;
+}
+
 /* footer */
 .print-doc .p-foot {
   display: flex; justify-content: space-between;
@@ -745,5 +760,6 @@ input[type="color"] { min-height: 42px; padding: 3px; width: 56px; flex: 0 0 56p
   body { display: block !important; overflow: visible; background: #fff; color: #000; }
   .screen, .bar, .no-print, #screenList, #screenDetail { display: none !important; }
   .print-only { display: block !important; }
-  .print-doc .p-sec, .print-doc .p-totals, .print-doc .p-photo { break-inside: avoid; }
+  .print-doc .p-sec, .print-doc .p-totals, .print-doc .p-photo,
+  .print-doc .p-confirm { break-inside: avoid; }
 }

@@ -396,6 +396,52 @@ await check('pdf keeps the quote to one page', `(async function(){
   return (txt.match(/\\/Type \\/Page[^s]/g) || []).length === 1;
 })()`, true);
 
+/* ---------- it is a confirmation sheet, not just a price ---------- */
+await check('the sheet asks to be confirmed', `(function(){
+  var html = QS.printDoc.build(QS.newQuote('JQ-TEST-001'), []);
+  return /Please confirm/.test(html) && /Signed/.test(html) && />Date</.test(html);
+})()`, true);
+await check('a typed design is printed and labelled', `(function(){
+  var q = QS.newQuote('JQ-TEST-002');
+  q.paint.hat.front = '#ffd60a';
+  q.paint.hat.frontName = 'Yellow';
+  q.paint.hat.frontDesign = 'checkerboard on the sleeves';
+  return /Design: checkerboard on the sleeves/.test(QS.printDoc.build(q, []));
+})()`, true);
+await check('the quote date is on the sheet', `(function(){
+  var q = QS.newQuote('JQ-TEST-003');
+  q.date = '2026-10-22';
+  return /Dated Oct 22, 2026/.test(QS.printDoc.build(q, []));
+})()`, true);
+await check('notes reach the sheet', `(function(){
+  var q = QS.newQuote('JQ-TEST-004');
+  q.notes = 'Customer wants the silks bright.';
+  return /Customer wants the silks bright/.test(QS.printDoc.build(q, []));
+})()`, true);
+await check('a reference photo goes on the exported sheet', `(async function(){
+  var c = document.createElement('canvas');
+  c.width = 120; c.height = 90;
+  var x = c.getContext('2d');
+  x.fillStyle = '#ffd60a'; x.fillRect(0, 0, 120, 90);
+  x.fillStyle = '#000'; x.fillRect(20, 20, 60, 40);
+  var ph = { id: 'testphoto', name: 'test.png', caption: 'front', dataUrl: c.toDataURL('image/png') };
+  await QS.exportDoc.preload([ph]);
+  var q = QS.newQuote('JQ-TEST-005');
+  return QS.exportDoc.ready([ph]) &&
+    QS.exportDoc.measure(q, [ph]) > QS.exportDoc.measure(q, []);
+})()`, true);
+await check('photos keep the pdf to one page', `(async function(){
+  var c = document.createElement('canvas');
+  c.width = 120; c.height = 90;
+  var x = c.getContext('2d');
+  x.fillStyle = '#ffd60a'; x.fillRect(0, 0, 120, 90);
+  var ph = { id: 'testphoto2', name: 'test.png', caption: 'front', dataUrl: c.toDataURL('image/png') };
+  await QS.exportDoc.preload([ph]);
+  var q = QS.newQuote('JQ-TEST-006');
+  var txt = await QS.exportDoc.pdf(q, [ph]).blob.text();
+  return (txt.match(/\\/Type \\/Page[^s]/g) || []).length === 1;
+})()`, true);
+
 /* ---------- save confirmation ---------- */
 await check('save modal hidden at rest', "getComputedStyle(document.getElementById('saveModal')).display", 'none');
 
