@@ -316,6 +316,48 @@ QS.money = function (n) {
   return v.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
 };
 
+/* Parts painted the same colour collapse into ONE row, so the sheet carries a
+   single square per colour instead of the same square three times over. Each
+   part keeps its own design note; once a row stands for more than one part the
+   note is prefixed with the part's name so it still says where it belongs.
+   Rows with no colour (text, badges) pass through untouched. */
+QS.groupRows = function (rows) {
+  var out = [];
+  var seen = {};
+
+  (rows || []).forEach(function (r) {
+    if (!r) return;
+    if (!/^#[0-9a-f]{6}$/i.test(r.hex || '')) { out.push(r); return; }
+    var key = String(r.hex).toLowerCase();
+    var g = seen[key];
+    if (!g) {
+      g = seen[key] = {
+        label: r.label, value: r.value, hex: r.hex,
+        badge: r.badge, design: r.design, parts: [r]
+      };
+      out.push(g);
+    } else {
+      g.parts.push(r);
+      if (!g.value && r.value) g.value = r.value;
+      if (!g.badge && r.badge) g.badge = r.badge;
+    }
+  });
+
+  out.forEach(function (g) {
+    if (!g.parts) return;
+    if (g.parts.length > 1) {
+      g.label = g.parts.map(function (p) { return p.label; }).join(', ');
+      g.design = g.parts
+        .filter(function (p) { return p.design; })
+        .map(function (p) { return p.label + ': ' + p.design; })
+        .join(' \u00b7 ');
+    }
+    delete g.parts;
+  });
+
+  return out;
+};
+
 QS.totals = function (q) {
   var ch = QS.charges(q);
   var sub = ch.total;

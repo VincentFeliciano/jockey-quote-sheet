@@ -54,6 +54,19 @@ QS.printDoc = (function () {
     return body ? '<div class="p-spec">' + body + '</div>' : '';
   }
 
+  /* The parts run through the shared grouper, so parts painted the same colour
+     print as ONE line with ONE square. Each part's design note still rides
+     along, prefixed with the part it belongs to. */
+  function paintRow(label, hex, name, design) {
+    return { label: label, hex: hex, value: name, design: design };
+  }
+
+  function paintSpec(rows) {
+    return spec(QS.groupRows(rows).map(function (r) {
+      return specRow(r.label, swatch(r.hex, r.value, r.design));
+    }));
+  }
+
   function build(q, photos) {
     var t = QS.totals(q);
     var j = q.job || {};
@@ -69,9 +82,10 @@ QS.printDoc = (function () {
     out.push('</div>');
 
     out.push('<div class="p-head">');
-    out.push('<div><h1>Quote</h1></div>');
+    /* no "Quote" heading: the sheet is something you send, and the number
+       earns the space instead */
+    out.push('<div><h1>' + esc(q.number || 'Un-numbered') + '</h1></div>');
     out.push('<div class="p-meta">');
-    out.push('<div><b>' + esc(q.number || 'un-numbered') + '</b></div>');
     if (q.date) out.push('<div>Dated ' + esc(fmtDate(q.date)) + '</div>');
     if (j.due) out.push('<div>Due ' + esc(fmtDate(j.due)) + '</div>');
     if (q.preparedBy) out.push('<div>Prepared by ' + esc(q.preparedBy) + '</div>');
@@ -80,28 +94,28 @@ QS.printDoc = (function () {
     /* ---------- the parts, two columns ---------- */
     out.push('<div class="p-grid"><div class="p-col">');
 
-    out.push(section('Hat', spec([
-      specRow('Front panel', swatch(p.hat.front, p.hat.frontName, p.hat.frontDesign)),
-      specRow('Left side', swatch(p.hat.left, p.hat.leftName, p.hat.leftDesign)),
-      specRow('Right side', swatch(p.hat.right, p.hat.rightName, p.hat.rightDesign)),
-      specRow('Back panel', swatch(p.hat.back, p.hat.backName, p.hat.backDesign)),
-      specRow('Bill', swatch(p.hat.bill, p.hat.billName, p.hat.billDesign))
+    out.push(section('Hat', paintSpec([
+      paintRow('Front panel', p.hat.front, p.hat.frontName, p.hat.frontDesign),
+      paintRow('Left side', p.hat.left, p.hat.leftName, p.hat.leftDesign),
+      paintRow('Right side', p.hat.right, p.hat.rightName, p.hat.rightDesign),
+      paintRow('Back panel', p.hat.back, p.hat.backName, p.hat.backDesign),
+      paintRow('Bill', p.hat.bill, p.hat.billName, p.hat.billDesign)
     ])));
 
-    out.push(section('Jockey', spec([
-      specRow('Eyes', swatch(p.figure.eyes, p.figure.eyesName, p.figure.eyesDesign)),
-      specRow('Hair', swatch(p.figure.hair, p.figure.hairName, p.figure.hairDesign)),
-      specRow('Body', swatch(p.figure.body, p.figure.bodyName, p.figure.bodyDesign)),
-      specRow('Sleeves', swatch(p.figure.sleeves, p.figure.sleevesName, p.figure.sleevesDesign)),
-      specRow('Cuffs', swatch(p.figure.cuffs, p.figure.cuffsName, p.figure.cuffsDesign)),
-      specRow('Buttons', swatch(p.figure.buttons, p.figure.buttonsName, p.figure.buttonsDesign)),
-      specRow('Pants', swatch(p.figure.pants, p.figure.pantsName, p.figure.pantsDesign)),
-      specRow('Boots', swatch(p.figure.boots, p.figure.bootsName, p.figure.bootsDesign)),
-      specRow('Boot cuffs', swatch(p.figure.bootCuffs, p.figure.bootCuffsName, p.figure.bootCuffsDesign)),
+    out.push(section('Jockey', paintSpec([
+      paintRow('Eyes', p.figure.eyes, p.figure.eyesName, p.figure.eyesDesign),
+      paintRow('Hair', p.figure.hair, p.figure.hairName, p.figure.hairDesign),
+      paintRow('Body', p.figure.body, p.figure.bodyName, p.figure.bodyDesign),
+      paintRow('Sleeves', p.figure.sleeves, p.figure.sleevesName, p.figure.sleevesDesign),
+      paintRow('Cuffs', p.figure.cuffs, p.figure.cuffsName, p.figure.cuffsDesign),
+      paintRow('Buttons', p.figure.buttons, p.figure.buttonsName, p.figure.buttonsDesign),
+      paintRow('Pants', p.figure.pants, p.figure.pantsName, p.figure.pantsDesign),
+      paintRow('Boots', p.figure.boots, p.figure.bootsName, p.figure.bootsDesign),
+      paintRow('Boot cuffs', p.figure.bootCuffs, p.figure.bootCuffsName, p.figure.bootCuffsDesign),
       (p.chestLogo || p.chestText)
-        ? specRow('Chest logo', esc(p.chestText) || 'Yes') : '',
+        ? paintRow('Chest logo', null, p.chestText || 'Yes', null) : null,
       (p.backArt || p.backText)
-        ? specRow('Back artwork', esc(p.backText) || 'Yes') : ''
+        ? paintRow('Back artwork', null, p.backText || 'Yes', null) : null
     ])));
 
     out.push('</div><div class="p-col">');
@@ -112,11 +126,11 @@ QS.printDoc = (function () {
       j.rush ? specRow('Rush job', '<b class="p-badge">RUSH JOB</b>') : ''
     ])));
 
-    out.push(section('Platform &amp; base', spec([
-      specRow('Platform', swatch(p.base.platform, p.base.platformName, p.base.platformDesign)),
-      specRow('Base', swatch(p.base.base, p.base.baseName, p.base.baseDesign)),
-      specRow('Base front text', esc(p.base.frontText)),
-      specRow('Base back text', esc(p.base.backText))
+    out.push(section('Platform &amp; base', paintSpec([
+      paintRow('Platform', p.base.platform, p.base.platformName, p.base.platformDesign),
+      paintRow('Base', p.base.base, p.base.baseName, p.base.baseDesign),
+      paintRow('Base front text', null, p.base.frontText, null),
+      paintRow('Base back text', null, p.base.backText, null)
     ])));
 
     out.push(section('Custom request', spec([
@@ -206,7 +220,7 @@ QS.printDoc = (function () {
     }
 
     /* footer */
-    out.push('<div class="p-foot"><span>' + esc(q.number || 'Quote') +
+    out.push('<div class="p-foot"><span>' + esc(q.number || 'Un-numbered') +
       (j.jockey ? ' &middot; ' + esc(j.jockey) : '') + '</span><span>' +
       esc(String(q.status || '').toUpperCase()) + '</span></div>');
 

@@ -1,6 +1,9 @@
 node_modules/
 *.log
 
+# safety copies taken before risky edits - local only, never in the repo
+backups/
+
 # probe and suite output
 test/export-sample.*
 test/*.txt

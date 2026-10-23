@@ -413,6 +413,58 @@ await check('the quote date is on the sheet', `(function(){
   q.date = '2026-10-22';
   return /Dated Oct 22, 2026/.test(QS.printDoc.build(q, []));
 })()`, true);
+
+/* ---------- one square per colour, not one per part ---------- */
+await check('parts sharing a colour share one square', `(function(){
+  function chips(same) {
+    var q = QS.newQuote('JQ-TEST-007');
+    q.paint.figure.eyes = '#000000';
+    q.paint.figure.hair = same ? '#000000' : '#222222';
+    q.paint.figure.boots = same ? '#000000' : '#333333';
+    return (QS.printDoc.build(q, []).match(/p-chip/g) || []).length;
+  }
+  return chips(true) === chips(false) - 2;
+})()`, true);
+await check('the shared row names every part', `(function(){
+  var q = QS.newQuote('JQ-TEST-008');
+  q.paint.figure.eyes = '#000000'; q.paint.figure.eyesName = 'Black';
+  q.paint.figure.hair = '#000000'; q.paint.figure.hairName = 'Black';
+  q.paint.figure.boots = '#000000'; q.paint.figure.bootsName = 'Black';
+  return /Eyes, Hair, Boots/.test(QS.printDoc.build(q, []));
+})()`, true);
+await check('a shared row keeps each part design note', `(function(){
+  var q = QS.newQuote('JQ-TEST-009');
+  q.paint.figure.eyes = '#000000'; q.paint.figure.eyesDesign = 'gloss';
+  q.paint.figure.hair = '#000000'; q.paint.figure.hairDesign = 'stripes';
+  return /Design: Eyes: gloss/.test(QS.printDoc.build(q, []));
+})()`, true);
+await check('the exported sheet groups the colours too', `(function(){
+  var q = QS.newQuote('JQ-TEST-010');
+  q.paint.figure.eyes = '#000000'; q.paint.figure.eyesName = 'Black';
+  q.paint.figure.hair = '#000000'; q.paint.figure.hairName = 'Black';
+  q.paint.figure.boots = '#000000'; q.paint.figure.bootsName = 'Black';
+  var seen = [];
+  var proto = CanvasRenderingContext2D.prototype;
+  var real = proto.fillText;
+  proto.fillText = function (t) { seen.push(String(t)); return real.apply(this, arguments); };
+  try { QS.exportDoc.render(q); } finally { proto.fillText = real; }
+  return seen.indexOf('Eyes, Hair, Boots') !== -1;
+})()`, true);
+
+/* ---------- the sheet is not labelled "Quote" ---------- */
+await check('the sheet carries no QUOTE heading', `(function(){
+  var html = QS.printDoc.build(QS.newQuote('JQ-TEST-011'), []);
+  return !/<h1>\\s*Quote\\s*<\\/h1>/i.test(html) && /<h1>JQ-TEST-011<\\/h1>/.test(html);
+})()`, true);
+await check('the exported sheet says the number, not QUOTE', `(function(){
+  var q = QS.newQuote('JQ-TEST-012');
+  var seen = [];
+  var proto = CanvasRenderingContext2D.prototype;
+  var real = proto.fillText;
+  proto.fillText = function (t) { seen.push(String(t)); return real.apply(this, arguments); };
+  try { QS.exportDoc.render(q); } finally { proto.fillText = real; }
+  return seen.indexOf('QUOTE') === -1 && seen.indexOf('JQ-TEST-012') !== -1;
+})()`, true);
 await check('notes reach the sheet', `(function(){
   var q = QS.newQuote('JQ-TEST-004');
   q.notes = 'Customer wants the silks bright.';

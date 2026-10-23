@@ -178,19 +178,19 @@ QS.exportDoc = (function () {
   function header(d, q) {
     var ctx = d.ctx;
     var j = q.job || {};
-    font(ctx, '700', S(44));
+    /* the number leads, not the word "Quote": this is a sheet you send, not a
+       form you fill in */
+    var head = q.number || 'Un-numbered';
+    font(ctx, '700', S(38));
     ctx.fillStyle = INK;
-    ctx.fillText('QUOTE', d.x, d.y + S(36));
-    var w = ctx.measureText('QUOTE').width;
+    ctx.fillText(head, d.x, d.y + S(34));
+    var w = ctx.measureText(head).width;
     ctx.fillStyle = YELLOW;
-    ctx.fillRect(d.x, d.y + S(44), w, S(6));
+    ctx.fillRect(d.x, d.y + S(42), w, S(6));
 
     var right = d.x + d.w;
     ctx.textAlign = 'right';
-    font(ctx, '700', S(22));
-    ctx.fillStyle = INK;
-    ctx.fillText(q.number || 'un-numbered', right, d.y + S(15));
-    var ry = d.y + S(40);
+    var ry = d.y + S(15);
     font(ctx, '400', S(17));
     ctx.fillStyle = MID;
     if (q.date) { ctx.fillText('Dated ' + fmtDate(q.date), right, ry); ry += S(22); }
@@ -274,7 +274,7 @@ QS.exportDoc = (function () {
   }
 
   function specBlock(d, title, rows) {
-    rows = rows.filter(function (r) { return r && (r.value || r.hex); });
+    rows = QS.groupRows(rows.filter(function (r) { return r && (r.value || r.hex); }));
     if (!rows.length) return;
     sectionTitle(d, title);
     rows.forEach(function (r) {

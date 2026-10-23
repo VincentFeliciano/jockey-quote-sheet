@@ -122,5 +122,37 @@ ok('old record totals 175', Q.totals(old).total === 175, 'got ' + Q.totals(old).
 /* ---------- guards ---------- */
 ok('decals floor at zero', Q.fillPricing({ decals: -5 }).decals === 0);
 
+/* ---------- parts painted the same colour share one row ---------- */
+const black = Q.groupRows([
+  { label: 'Eyes', hex: '#000000', value: 'Black' },
+  { label: 'Hair', hex: '#000000', value: 'Black' },
+  { label: 'Boots', hex: '#000000', value: 'Black' }
+]);
+ok('three black parts make one row', black.length === 1, 'got ' + black.length);
+ok('the row names every part', black[0].label === 'Eyes, Hair, Boots', black[0].label);
+ok('the row keeps the colour', black[0].hex === '#000000', black[0].hex);
+ok('the row keeps the colour name', black[0].value === 'Black', black[0].value);
+
+const two = Q.groupRows([
+  { label: 'Sleeves', hex: '#ffd60a', value: 'Yellow', design: 'checkerboard' },
+  { label: 'Cuffs', hex: '#FFD60A', value: 'Yellow', design: 'plain' },
+  { label: 'Base', hex: '#111111', value: 'Charcoal' }
+]);
+ok('colour match ignores case', two.length === 2, 'got ' + two.length);
+ok('each design note names its part', two[0].design === 'Sleeves: checkerboard \u00b7 Cuffs: plain', two[0].design);
+ok('a part alone keeps its bare note', Q.groupRows([
+  { label: 'Base', hex: '#111111', value: 'Charcoal', design: 'matte' }
+])[0].design === 'matte');
+
+const mixed = Q.groupRows([
+  { label: 'Jockey name', value: 'R. Vega' },
+  { label: 'Rush job', value: 'RUSH JOB', badge: true },
+  { label: 'Eyes', hex: '#000000', value: 'Black' },
+  null
+]);
+ok('rows with no colour pass straight through', mixed.length === 3, 'got ' + mixed.length);
+ok('text rows keep their order', mixed[0].label === 'Jockey name' && mixed[1].label === 'Rush job');
+ok('nothing to group is nothing to change', Q.groupRows([]).length === 0);
+
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);
