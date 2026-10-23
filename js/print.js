@@ -29,12 +29,15 @@ QS.printDoc = (function () {
     return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   }
 
+  /* A colour prints as its square, plus the name if one was typed. The hex is
+     never printed - the square IS the colour, and a code beside it is noise
+     the customer cannot use. A row with a square but no name shows the square
+     alone; a row with neither falls back to an em dash. */
   function swatch(hex, name, design) {
-    var chip = '';
-    if (/^#[0-9a-f]{6}$/i.test(hex || '')) {
-      chip = '<i class="p-chip" style="background:' + esc(hex) + '"></i>';
-    }
-    var label = esc(name || '') || (hex ? esc(hex) : '\u2014');
+    var hasColour = /^#[0-9a-f]{6}$/i.test(hex || '');
+    var chip = hasColour ? '<i class="p-chip" style="background:' + esc(hex) + '"></i>' : '';
+    var label = esc(name || '');
+    if (!label && !hasColour) label = '\u2014';
     var note = design ? '<em class="p-design">Design: ' + esc(design) + '</em>' : '';
     return label + chip + note;
   }

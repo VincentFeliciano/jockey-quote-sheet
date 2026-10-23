@@ -7,3 +7,4 @@ backups/
 # probe and suite output
 test/export-sample.*
 test/*.txt
+test/geometry.json 

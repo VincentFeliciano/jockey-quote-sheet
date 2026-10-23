@@ -686,11 +686,20 @@ input[type="color"] { min-height: 42px; padding: 3px; width: 56px; flex: 0 0 56p
   padding: 3px 0; border-bottom: 1px solid #efefef;
   font-size: 10.5px; color: #454545;
 }
-.print-doc .p-spec .p-val { text-align: right; color: #000; font-weight: 600; }
+.print-doc .p-spec .p-val {
+  text-align: right; color: #000; font-weight: 600;
+  /* label and square are flex siblings, so the square keeps its size and the
+     name can never run over it */
+  display: flex; align-items: center; justify-content: flex-end; gap: 7px;
+  min-width: 0;
+}
+.print-doc .p-spec div > span:first-child { min-width: 0; overflow-wrap: anywhere; }
+.print-doc .p-spec .p-val > span:first-child { min-width: 0; overflow-wrap: anywhere; }
 .print-doc .p-chip {
-  display: inline-block; width: 9px; height: 9px;
+   display: inline-block; width: 30px; height: 30px;
+  flex: 0 0 auto;
   border: .5pt solid #999; border-radius: 1px;
-  margin-left: 5px; vertical-align: -1px;
+  vertical-align: middle;
 }
 /* the design note under a colour, kept quiet so it reads as a footnote */
 .print-doc .p-design {

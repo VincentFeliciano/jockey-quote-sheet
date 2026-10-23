@@ -218,53 +218,91 @@ QS.exportDoc = (function () {
     var ctx = d.ctx;
     var right = d.x + d.w;
     var text = value || '';
+    /* A hex is not a name. Some rows hand over the code when nothing was
+       typed, so blank it and let the square speak for itself. */
+    if (/^#[0-9a-f]{6}$/i.test(text)) text = '';
 
-    var lines = [];
-    if (design) {
-      font(ctx, '400', S(14));
-      lines = wrap(ctx, 'Design: ' + design, d.w - S(4)).slice(0, 2);
-    }
-    var h = S(34) + lines.length * S(19);
+    var hasColour = /^#[0-9a-f]{6}$/i.test(hex || '');
+    var gap = S(12);
 
-    font(ctx, '400', S(17.5));
-    ctx.fillStyle = MID;
-    ctx.fillText(label, d.x, d.y + S(21));
-
+    /* the rush pill, when there is one, owns the right edge */
+    var pillW = 0;
     if (badge && text) {
       font(ctx, '700', S(15));
-      var bw = ctx.measureText(text).width + S(22);
+      pillW = ctx.measureText(text).width + S(22);
+    }
+
+    /* a square only when the row carries a real colour */
+    var sq = hasColour ? S(80) : 0;
+    var sx = right - sq - (pillW ? pillW + gap : 0);
+
+    /* Once colours are grouped the label can name five parts at once, so it
+       wraps inside the space the square leaves. It is never allowed to run
+       across the square or under the pill. */
+    var labelRoom = Math.max(S(90), sx - d.x - gap);
+    font(ctx, '400', S(17.5));
+    var labelLines = wrap(ctx, label, labelRoom).slice(0, 3);
+
+    /* the typed name sits on its own line, under the label, never beside it */
+    var nameLines = [];
+    if (text && !pillW) {
+      font(ctx, '600', S(18));
+      nameLines = wrap(ctx, text, labelRoom).slice(0, 2);
+    }
+
+    var designLines = [];
+    if (design) {
+      font(ctx, '400', S(14));
+      designLines = wrap(ctx, 'Design: ' + design, labelRoom).slice(0, 2);
+    }
+
+    var textH = labelLines.length * S(22) + nameLines.length * S(23) + designLines.length * S(19);
+    var h = Math.max(textH, sq + S(10)) + S(14);
+
+    if (sq) {
+      ctx.fillStyle = hex;
+      ctx.fillRect(sx, d.y + S(5), sq, sq);
+      /* white needs a darker edge or it vanishes into the paper */
+      ctx.strokeStyle = hex.toLowerCase() === '#ffffff' ? '#9a9a9a' : '#c2c2c2';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(sx - 0.5, d.y + S(5) - 0.5, sq + 1, sq + 1);
+    }
+
+    if (pillW) {
+      font(ctx, '700', S(15));
       ctx.fillStyle = YELLOW;
-      ctx.fillRect(right - bw, d.y + S(4), bw, S(26));
+      ctx.fillRect(right - pillW, d.y + S(4), pillW, S(26));
       ctx.fillStyle = INK;
       ctx.textAlign = 'right';
       ctx.fillText(text, right - S(11), d.y + S(23));
       ctx.textAlign = 'left';
-    } else if (/^#[0-9a-f]{6}$/i.test(hex || '')) {
-      ctx.fillStyle = hex;
-      ctx.fillRect(right - S(21), d.y + S(6), S(19), S(19));
-      ctx.strokeStyle = '#c2c2c2';
-      ctx.lineWidth = 1;
-      ctx.strokeRect(right - S(21) - 0.5, d.y + S(6) - 0.5, S(19) + 1, S(19) + 1);
+    }
+
+    var y = d.y + S(21);
+    font(ctx, '400', S(17.5));
+    ctx.fillStyle = MID;
+    labelLines.forEach(function (ln) {
+      ctx.fillText(ln, d.x, y);
+      y += S(22);
+    });
+
+    if (nameLines.length) {
       font(ctx, '600', S(18));
       ctx.fillStyle = INK;
-      ctx.textAlign = 'right';
-      ctx.fillText(text || hex, right - S(28), d.y + S(22));
-      ctx.textAlign = 'left';
-    } else {
-      font(ctx, '600', S(18));
-      ctx.fillStyle = text ? INK : MUTED;
-      ctx.textAlign = 'right';
-      ctx.fillText(text || '\u2014', right, d.y + S(22));
-      ctx.textAlign = 'left';
+      nameLines.forEach(function (ln) {
+        ctx.fillText(ln, d.x, y);
+        y += S(23);
+      });
     }
 
     /* the design note sits under its colour, quiet, so the sheet still reads
        as a list of parts */
-    if (lines.length) {
+    if (designLines.length) {
       font(ctx, '400', S(14));
       ctx.fillStyle = MID;
-      lines.forEach(function (ln, i) {
-        ctx.fillText(ln, d.x, d.y + S(21) + S(15) + i * S(19));
+      designLines.forEach(function (ln) {
+        ctx.fillText(ln, d.x, y);
+        y += S(19);
       });
     }
 
