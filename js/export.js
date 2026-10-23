@@ -13,7 +13,7 @@ QS.exportDoc = (function () {
   var CW = W - M * 2;
   var GAP = 40;            /* between the two columns */
   var COLW = (CW - GAP) / 2;
-  var BRAND = 74;          /* the black band across the top */
+  var BRAND = 92;          /* the black band across the top */
   var TOP = BRAND + 20;    /* first baseline area under the band */
   var FOOT = 92;
   var BOTTOM = H - FOOT;   /* content must end above this */
@@ -144,26 +144,26 @@ QS.exportDoc = (function () {
 
     var p = marks.plymr;
     if (p) {
-      var ph = 28;
+      var ph = 40;
       var pw = ph * (p.naturalWidth / p.naturalHeight);
       ctx.drawImage(p, x, mid - ph / 2, pw, ph);
-      x += pw + 20;
+      x += pw + 24;
     }
 
     ctx.fillStyle = '#3a3a3a';
-    ctx.fillRect(x, mid - 16, 1.5, 32);
-    x += 21;
+    ctx.fillRect(x, mid - 21, 1.5, 42);
+    x += 25;
 
     var g = marks.cg;
     if (g) {
-      var gh = 24;
+      var gh = 34;
       var gw = gh * (g.naturalWidth / g.naturalHeight);
       ctx.drawImage(g, x, mid - gh / 2, gw, gh);
     }
 
     /* what the sheet is, said in the brand's own voice */
     var strap = 'QUOTE FOR CRAFTER\u2019S GALLERY';
-    font(ctx, '700', 16);
+    font(ctx, '700', 17);
     ctx.fillStyle = YELLOW;
     var sw = 0;
     for (var i = 0; i < strap.length; i++) sw += ctx.measureText(strap.charAt(i)).width + 2.6;
@@ -524,39 +524,6 @@ QS.exportDoc = (function () {
     }
   }
 
-  /* ---------- the bit the customer signs ----------
-
-     This is a confirmation sheet as much as a quote: the point of it is that
-     someone reads every colour and design and puts their name to it. */
-
-  function confirmBlock(d, q) {
-    var ctx = d.ctx;
-    var h = S(100);
-    sectionTitle(d, 'Please confirm');
-    var top = d.y;
-    ctx.fillStyle = '#f7f7f7';
-    ctx.fillRect(d.x, top, d.w, h);
-    ctx.fillStyle = YELLOW;
-    ctx.fillRect(d.x, top, S(6), h);
-
-    font(ctx, '400', S(14.5));
-    ctx.fillStyle = MID;
-    ctx.fillText('Check every colour, design and note above against what you asked for.',
-      d.x + S(20), top + S(24));
-
-    var half = (d.w - S(40) - S(28)) / 2;
-    var y = top + h - S(20);
-    ctx.fillStyle = '#c2c2c2';
-    ctx.fillRect(d.x + S(20), y, half, 1);
-    ctx.fillRect(d.x + S(20) + half + S(28), y, half, 1);
-    font(ctx, '400', S(12));
-    ctx.fillStyle = MUTED;
-    ctx.fillText('Signed', d.x + S(20), y - S(7));
-    ctx.fillText('Date', d.x + S(20) + half + S(28), y - S(7));
-
-    d.y = top + h + S(10);
-  }
-
   function footer(ctx, q) {
     var y = H - 46;
     ctx.fillStyle = LINE;
@@ -581,7 +548,6 @@ QS.exportDoc = (function () {
     notes(d, q);
     followUp(d, q);
     photoStrip(d, photos);
-    confirmBlock(d, q);
     return d.y;
   }
 

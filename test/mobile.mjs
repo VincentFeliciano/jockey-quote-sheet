@@ -396,10 +396,10 @@ await check('pdf keeps the quote to one page', `(async function(){
   return (txt.match(/\\/Type \\/Page[^s]/g) || []).length === 1;
 })()`, true);
 
-/* ---------- it is a confirmation sheet, not just a price ---------- */
-await check('the sheet asks to be confirmed', `(function(){
+/* ---------- it is a quote to send, not a form to sign ---------- */
+await check('the sheet carries no signature block', `(function(){
   var html = QS.printDoc.build(QS.newQuote('JQ-TEST-001'), []);
-  return /Please confirm/.test(html) && /Signed/.test(html) && />Date</.test(html);
+  return !/Please confirm|Signed|p-sign/.test(html);
 })()`, true);
 await check('a typed design is printed and labelled', `(function(){
   var q = QS.newQuote('JQ-TEST-002');

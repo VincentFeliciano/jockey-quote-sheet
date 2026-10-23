@@ -205,13 +205,6 @@ QS.printDoc = (function () {
       out.push(section('Reference photos', '<div class="p-photo-grid">' + figs.join('') + '</div>'));
     }
 
-    /* the bit the customer signs — this sheet exists to be confirmed */
-    out.push('<div class="p-confirm">');
-    out.push('<h2>Please confirm</h2>');
-    out.push('<p>Check every colour, design and note above against what you asked for.</p>');
-    out.push('<div class="p-sign"><span>Signed</span><span>Date</span></div>');
-    out.push('</div>');
-
     /* footer */
     out.push('<div class="p-foot"><span>' + esc(q.number || 'Quote') +
       (j.jockey ? ' &middot; ' + esc(j.jockey) : '') + '</span><span>' +
